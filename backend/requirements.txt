@@ -1,0 +1,21 @@
+# Core Django
+Django>=5.0,<7.0
+djangorestframework>=3.14.0
+
+# Authentication
+djangorestframework-simplejwt==5.5.1
+PyJWT==2.10.1
+
+# Supabase Integration
+gotrue==2.12.4
+httpx==0.28.1
+
+# Database
+psycopg2-binary==2.9.11
+
+# Environment Configuration
+python-decouple==3.8
+
+# Additional utilities
+cryptography==46.0.3
+pydantic==2.12.5
