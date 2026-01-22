@@ -56,7 +56,7 @@ class UserLoginSerializer(serializers.Serializer):
 class OTPVerificationSerializer(serializers.Serializer):
     """Serializer for OTP verification"""
     email = serializers.EmailField(required=True)
-    token = serializers.CharField(required=True, min_length=6, max_length=8, help_text="6-8 digit OTP code")
+    token = serializers.CharField(required=True, min_length=8, max_length=8, help_text="8 digit OTP code")
     type = serializers.CharField(default='email')
 
 
@@ -74,7 +74,7 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 class PasswordResetOTPVerifySerializer(serializers.Serializer):
     """Serializer for password reset OTP verification"""
     email = serializers.EmailField(required=True)
-    token = serializers.CharField(required=True, min_length=6, max_length=8, help_text="6-8 digit OTP code")
+    token = serializers.CharField(required=True, min_length=8, max_length=8, help_text="8 digit OTP code")
 
 
 class PasswordResetConfirmSerializer(serializers.Serializer):

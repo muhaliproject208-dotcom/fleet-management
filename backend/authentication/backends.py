@@ -86,11 +86,12 @@ class SupabaseJWTAuthentication:
         Returns:
             Tuple of (user, token) if successful, None otherwise
         """
-        from rest_framework import authentication
         from rest_framework import exceptions
         
         # Get token from Authorization header
         auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        
+        logger.debug(f"Auth header: {auth_header[:50]}..." if auth_header else "No auth header")
         
         if not auth_header.startswith('Bearer '):
             return None
@@ -125,4 +126,4 @@ class SupabaseJWTAuthentication:
         """
         Return authentication header for 401 responses.
         """
-        return 'Bearer realm="api"'
+        return 'Bearer'

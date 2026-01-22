@@ -332,8 +332,11 @@ class SupabaseAuthService:
             Dictionary with user data
         """
         try:
-            self.auth_client.set_session(access_token, '')
-            user = self.auth_client.get_user()
+            # Pass token directly instead of setting session on shared client
+            response = self.auth_client.get_user(access_token)
+            
+            # The response should have a user attribute
+            user = response.user if hasattr(response, 'user') else response
             
             return {
                 'success': True,
