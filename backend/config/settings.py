@@ -50,6 +50,8 @@ INSTALLED_APPS = [
     'authentication',
     'drivers',
     'mechanics',
+    'vehicles',
+    'inspections',
 ]
 
 MIDDLEWARE = [
