@@ -25,6 +25,7 @@ from .evaluation import (
     EvaluationSummaryAdmin,
 )
 from .signoff import InspectionSignOffAdmin
+from .audit import AuditLogAdmin
 
 __all__ = [
     'PreTripInspectionAdmin',
@@ -44,4 +45,5 @@ __all__ = [
     'SupervisorRemarksAdmin',
     'EvaluationSummaryAdmin',
     'InspectionSignOffAdmin',
+    'AuditLogAdmin',
 ]

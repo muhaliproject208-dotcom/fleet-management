@@ -8,6 +8,9 @@ All endpoints are prefixed with /api/v1/
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_nested import routers
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
 
 from drivers.views import DriverViewSet
 from mechanics.views import MechanicViewSet
@@ -59,6 +62,46 @@ inspections_router.register(r'enforcement-actions', EnforcementActionViewSet, ba
 inspections_router.register(r'supervisor-remarks', SupervisorRemarksViewSet, basename='inspection-remarks')
 inspections_router.register(r'evaluation', EvaluationSummaryViewSet, basename='inspection-evaluation')
 inspections_router.register(r'sign-offs', InspectionSignOffViewSet, basename='inspection-signoff')
+
+# OpenAPI/Swagger Documentation
+schema_view = get_schema_view(
+    openapi.Info(
+        title="Fleet Management API",
+        default_version='v1',
+        description="""
+        ## Pre-Trip Inspection System API
+        
+        Complete fleet management system with pre-trip inspection workflow.
+        
+        ### Features:
+        - Driver, Vehicle, and Mechanic Management
+        - Comprehensive Pre-Trip Inspections (12 modules)
+        - Health & Fitness Checks
+        - Documentation & Compliance Tracking
+        - Vehicle Inspection Checks (5 types)
+        - Trip Behavior & Driving Monitoring
+        - Post-Trip Reporting & Risk Assessment
+        - Corrective Measures & Enforcement Actions
+        - Supervisor Remarks & Evaluation
+        - Digital Sign-Offs
+        - PDF Report Generation
+        - Audit Logging
+        
+        ### Authentication:
+        All endpoints require JWT authentication.
+        Use `/api/v1/auth/login/` to obtain tokens.
+        
+        ### Roles:
+        - Transport Supervisor: Create and manage inspections
+        - Fleet Manager: Approve/reject inspections, full access
+        - Superuser: Full system access
+        """,
+        contact=openapi.Contact(email="support@fleetmanagement.com"),
+        license=openapi.License(name="Proprietary"),
+    ),
+    public=True,
+    permission_classes=(permissions.AllowAny,),
+)
 
 urlpatterns = [
     # Authentication endpoints

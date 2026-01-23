@@ -34,6 +34,7 @@ from .signoff import (
     SignOffRole,
     InspectionSignOff,
 )
+from .audit import AuditLog, AuditAction
 
 __all__ = [
     'InspectionStatus',
@@ -63,4 +64,6 @@ __all__ = [
     'EvaluationSummary',
     'SignOffRole',
     'InspectionSignOff',
+    'AuditLog',
+    'AuditAction',
 ]

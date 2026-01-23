@@ -11,9 +11,11 @@ from ..models import PreTripInspection, InspectionStatus
 from ..serializers import (
     InspectionListSerializer,
     InspectionDetailSerializer,
-    InspectionCreateUpdateSerializer
+    InspectionCreateUpdateSerializer,
+    PreTripInspectionFullSerializer,
 )
 from ..pdf_generator import InspectionPDFGenerator
+from ..filters import PreTripInspectionFilter
 from authentication.permissions import IsTransportSupervisor, IsFleetManager
 
 
@@ -122,6 +124,9 @@ class PreTripInspectionViewSet(viewsets.ModelViewSet):
             return InspectionListSerializer
         elif self.action in ['create', 'update', 'partial_update']:
             return InspectionCreateUpdateSerializer
+        elif self.action == 'retrieve':
+            # Use full serializer for detailed view with all nested data
+            return PreTripInspectionFullSerializer
         else:
             return InspectionDetailSerializer
     
@@ -298,3 +303,81 @@ class PreTripInspectionViewSet(viewsets.ModelViewSet):
                 {'error': f'Failed to generate PDF: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+    
+    @action(detail=False, methods=['get'])
+    def dashboard_stats(self, request):
+        """
+        Get dashboard statistics for inspections.
+        Returns different stats based on user role.
+        
+        GET /api/v1/inspections/dashboard_stats/
+        """
+        from ..models import RiskScoreSummary
+        
+        user = request.user
+        
+        # Filter inspections based on user role
+        if user.is_transport_supervisor_role:
+            inspections = PreTripInspection.objects.filter(supervisor=user)
+        else:
+            inspections = PreTripInspection.objects.all()
+        
+        # Calculate statistics
+        stats = {
+            'total_inspections': inspections.count(),
+            'status_breakdown': {
+                'draft': inspections.filter(status='draft').count(),
+                'submitted': inspections.filter(status='submitted').count(),
+                'approved': inspections.filter(status='approved').count(),
+                'rejected': inspections.filter(status='rejected').count(),
+            },
+            'high_risk_drivers': RiskScoreSummary.objects.filter(
+                risk_level='high'
+            ).count(),
+            'medium_risk_drivers': RiskScoreSummary.objects.filter(
+                risk_level='medium'
+            ).count(),
+        }
+        
+        # Add pending approvals count for fleet managers
+        if user.is_fleet_manager_role or user.is_superuser_role:
+            stats['pending_approvals'] = PreTripInspection.objects.filter(
+                status='submitted'
+            ).count()
+        
+        # Add recent inspections (last 7 days)
+        from datetime import timedelta
+        from django.utils import timezone
+        
+        seven_days_ago = timezone.now() - timedelta(days=7)
+        stats['recent_inspections'] = {
+            'last_7_days': inspections.filter(
+                created_at__gte=seven_days_ago
+            ).count(),
+            'approved_last_7_days': inspections.filter(
+                status='approved',
+                approval_status_updated_at__gte=seven_days_ago
+            ).count(),
+        }
+        
+        # Add critical failures count
+        from ..models import (
+            VehicleExteriorCheck,
+            EngineFluidCheck,
+            InteriorCabinCheck,
+            FunctionalCheck,
+            SafetyEquipmentCheck
+        )
+        
+        critical_failures = 0
+        for model in [VehicleExteriorCheck, EngineFluidCheck, InteriorCabinCheck, 
+                      FunctionalCheck, SafetyEquipmentCheck]:
+            critical_failures += model.objects.filter(
+                status='fail',
+                is_critical_failure=True,
+                inspection__in=inspections
+            ).count()
+        
+        stats['critical_failures'] = critical_failures
+        
+        return Response(stats)
