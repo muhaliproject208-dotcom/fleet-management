@@ -163,6 +163,15 @@ export async function refreshToken(): Promise<ApiResponse<{ access_token: string
 // Get current user from localStorage
 export function getCurrentUser(): User | null {
   if (typeof window === 'undefined') return null;
+  
+  // Check if we have a valid token
+  const token = localStorage.getItem('access_token');
+  if (!token) {
+    // Clear user data if no token
+    localStorage.removeItem('user');
+    return null;
+  }
+  
   const user = localStorage.getItem('user');
   return user ? JSON.parse(user) : null;
 }
@@ -170,5 +179,36 @@ export function getCurrentUser(): User | null {
 // Check if user is authenticated
 export function isAuthenticated(): boolean {
   if (typeof window === 'undefined') return false;
-  return !!localStorage.getItem('access_token');
+  
+  const token = localStorage.getItem('access_token');
+  
+  // No token means not authenticated
+  if (!token) {
+    return false;
+  }
+  
+  // Try to parse the JWT token to check expiration
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const expirationTime = payload.exp * 1000; // Convert to milliseconds
+    const currentTime = Date.now();
+    
+    // If token is expired or will expire in the next 5 seconds, consider it invalid
+    if (expirationTime <= currentTime + 5000) {
+      // Clear auth data
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    // If we can't parse the token, consider it invalid
+    console.error('Failed to parse token:', error);
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+    return false;
+  }
 }
