@@ -37,7 +37,6 @@ a {
   border: 2px solid #000000;
   border-radius: 12px;
   padding: 40px;
-  box-shadow: 8px 8px 0px #000000;
 }
 
 /* Typography */
@@ -86,14 +85,6 @@ textarea {
   background: #ffffff;
   color: #000000;
   transition: all 0.2s;
-}
-
-input:focus,
-select:focus,
-textarea:focus {
-  outline: none;
-  box-shadow: 4px 4px 0px #000000;
-  transform: translate(-2px, -2px);
 }
 
 input::placeholder {
@@ -213,7 +204,6 @@ button:disabled {
   border: 2px solid #000000;
   border-radius: 12px;
   padding: 30px;
-  box-shadow: 6px 6px 0px #000000;
 }
 
 .profile-row {
