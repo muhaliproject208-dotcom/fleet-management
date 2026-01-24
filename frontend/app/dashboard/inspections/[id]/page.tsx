@@ -28,11 +28,13 @@ export default function InspectionDetailPage() {
       return;
     }
 
-    // Get user role
-    const user = getCurrentUser();
-    if (user) {
-      setUserRole(user.role);
-    }
+    // Get user role - defer setState to avoid cascading renders
+    const frame = requestAnimationFrame(() => {
+      const user = getCurrentUser();
+      if (user) {
+        setUserRole(user.role);
+      }
+    });
 
     const fetchInspectionData = async () => {
       const response = await getInspection(id);
@@ -47,6 +49,8 @@ export default function InspectionDetailPage() {
     };
 
     void fetchInspectionData();
+
+    return () => cancelAnimationFrame(frame);
   }, [router, id]);
 
   const formatDate = (dateString: string) => {

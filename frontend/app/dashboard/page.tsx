@@ -86,11 +86,6 @@ export default function DashboardPage() {
     void fetchDashboardData();
   }, []);
 
-  const handleLogout = async () => {
-    await logout();
-    router.push('/login');
-  };
-
   if (loading) {
     return (
       <div className="container">

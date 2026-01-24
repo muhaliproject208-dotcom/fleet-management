@@ -118,27 +118,6 @@ export default function ReportsPage() {
     }
   };
 
-  const calculateTotalScore = (evaluation?: ReportWithScores['evaluation']) => {
-    if (!evaluation) return null;
-    const scores = [
-      evaluation.pre_trip_inspection_score,
-      evaluation.driving_conduct_score,
-      evaluation.incident_management_score,
-      evaluation.post_trip_reporting_score,
-      evaluation.compliance_documentation_score,
-    ].filter(s => s !== undefined && s !== null);
-    
-    if (scores.length === 0) return null;
-    return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-  };
-
-  const getScoreColor = (score: number | null) => {
-    if (score === null) return '#999';
-    if (score >= 4) return '#000';
-    if (score >= 3) return '#333';
-    return '#666';
-  };
-
   const totalPages = Math.ceil(totalCount / pageSize);
 
   if (loading) {
@@ -299,9 +278,7 @@ export default function ReportsPage() {
                 </tr>
               </thead>
               <tbody>
-                {reports.map((report) => {
-                  const totalScore = calculateTotalScore(report.evaluation);
-                  return (
+                {reports.map((report) => (
                     <tr 
                       key={report.id} 
                       style={{ 
@@ -384,8 +361,7 @@ export default function ReportsPage() {
                         </div>
                       </td>
                     </tr>
-                  );
-                })}
+                ))}
               </tbody>
             </table>
           </div>
