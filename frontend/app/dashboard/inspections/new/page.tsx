@@ -349,7 +349,7 @@ export default function NewInspectionWizard() {
                 status: check.status,
                 remarks: check.remarks || ''
               }))
-            } : {}),
+            } : )
           }));
           
           // Mark sections as saved if they exist
