@@ -287,7 +287,7 @@ export default function NewInspectionWizard() {
               alcohol_test_status: inspection.health_fitness.alcohol_test_status,
               alcohol_test_remarks: inspection.health_fitness.alcohol_test_remarks || '',
               temperature_check_status: inspection.health_fitness.temperature_check_status,
-              temperature_value: inspection.health_fitness.temperature_value || '',
+              temperature_value: inspection.health_fitness.temperature_value?.toString() || '',
               fit_for_duty: inspection.health_fitness.fit_for_duty,
               medication_status: inspection.health_fitness.medication_status,
               medication_remarks: inspection.health_fitness.medication_remarks || '',
@@ -349,7 +349,7 @@ export default function NewInspectionWizard() {
                 status: check.status,
                 remarks: check.remarks || ''
               }))
-            } : )
+            } : {})
           }));
           
           // Mark sections as saved if they exist
