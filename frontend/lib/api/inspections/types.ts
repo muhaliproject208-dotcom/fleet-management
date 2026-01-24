@@ -211,7 +211,7 @@ export type UpdateInspectionData = Partial<CreateInspectionData>;
 
 // Health & Fitness Check
 
-export type HealthFitnessCheck = BaseModel & {
+export interface HealthFitnessCheck extends BaseModel {
   inspection: string;
 
   // Checks
@@ -229,10 +229,7 @@ export type HealthFitnessCheck = BaseModel & {
   // Fatigue
   fatigue_checklist_completed: boolean;
   fatigue_remarks?: string;
-
-  created_at: string;
-  updated_at: string;
-};
+}
 
 export interface CreateHealthFitnessData {
   inspection: string;
