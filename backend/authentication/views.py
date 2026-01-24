@@ -69,14 +69,14 @@ class RegisterView(APIView):
             role=user_metadata.get('role'),
         )
         
-        # Immediately request OTP to be sent
-        otp_result = supabase_auth.resend_otp(email, 'signup')
+        # Note: Supabase sign_up() already sends verification OTP automatically
+        # Don't call resend_otp here to avoid hitting email rate limits (2 emails/hour on free tier)
         
         return Response({
             'message': 'Registration successful! A 6-digit verification code has been sent to your email.',
             'user': UserSerializer(user).data,
             'email_verification_required': True,
-            'otp_sent': otp_result.get('success', False)
+            'otp_sent': True  # OTP is sent automatically by Supabase sign_up
         }, status=status.HTTP_201_CREATED)
 
 
