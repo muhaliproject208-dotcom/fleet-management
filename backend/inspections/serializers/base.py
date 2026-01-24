@@ -68,6 +68,7 @@ class InspectionListSerializer(serializers.ModelSerializer):
     vehicle = VehicleBasicSerializer(read_only=True)
     supervisor = UserBasicSerializer(read_only=True)
     completion_info = serializers.SerializerMethodField()
+    post_trip_completion_info = serializers.SerializerMethodField()
     
     class Meta:
         model = PreTripInspection
@@ -81,6 +82,7 @@ class InspectionListSerializer(serializers.ModelSerializer):
             'vehicle',
             'supervisor',
             'completion_info',
+            'post_trip_completion_info',
             'created_at'
         ]
         read_only_fields = fields
@@ -89,6 +91,12 @@ class InspectionListSerializer(serializers.ModelSerializer):
         """Get completion info for draft inspections"""
         if obj.status == InspectionStatus.DRAFT:
             return obj.get_completion_status()
+        return None
+    
+    def get_post_trip_completion_info(self, obj):
+        """Get completion info for post-trip in progress inspections"""
+        if obj.status in [InspectionStatus.APPROVED, InspectionStatus.POST_TRIP_IN_PROGRESS]:
+            return obj.get_post_trip_completion_status()
         return None
 
 
@@ -100,6 +108,7 @@ class InspectionDetailSerializer(serializers.ModelSerializer):
     mechanic = MechanicBasicSerializer(read_only=True)
     approved_by = UserDetailedSerializer(read_only=True)
     completion_info = serializers.SerializerMethodField()
+    post_trip_completion_info = serializers.SerializerMethodField()
     
     class Meta:
         model = PreTripInspection
@@ -119,6 +128,7 @@ class InspectionDetailSerializer(serializers.ModelSerializer):
             'approval_status_updated_at',
             'rejection_reason',
             'completion_info',
+            'post_trip_completion_info',
             'created_at',
             'updated_at'
         ]
@@ -128,6 +138,12 @@ class InspectionDetailSerializer(serializers.ModelSerializer):
         """Get completion info for draft inspections"""
         if obj.status == InspectionStatus.DRAFT:
             return obj.get_completion_status()
+        return None
+    
+    def get_post_trip_completion_info(self, obj):
+        """Get completion info for post-trip in progress inspections"""
+        if obj.status in [InspectionStatus.APPROVED, InspectionStatus.POST_TRIP_IN_PROGRESS]:
+            return obj.get_post_trip_completion_status()
         return None
 
 

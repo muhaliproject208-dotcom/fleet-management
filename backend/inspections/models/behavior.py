@@ -67,14 +67,20 @@ class TripBehaviorMonitoring(models.Model):
         if self.status != BehaviorStatus.VIOLATION:
             return 0
         
-        # Points mapping for violations
+        # Points mapping for violations - must match frontend VIOLATION_POINTS
         points_map = {
             self.BehaviorItems.SPEED_SCHOOL_ZONE: 5,
-            self.BehaviorItems.SPEED_MARKET_AREA: 4,
-            self.BehaviorItems.HAZARDOUS_ZONE_SPEED: 3,
-            self.BehaviorItems.EXCESSIVE_DRIVING: 3,
-            self.BehaviorItems.TRAFFIC_INFRACTIONS: 2,
-            self.BehaviorItems.INCIDENTS: 10,
+            self.BehaviorItems.SPEED_MARKET_AREA: 5,
+            self.BehaviorItems.MAX_SPEED_OPEN_ROAD: 3,
+            self.BehaviorItems.RAILWAY_CROSSING: 10,
+            self.BehaviorItems.TOLL_GATE: 2,
+            self.BehaviorItems.HAZARDOUS_ZONE_SPEED: 10,
+            self.BehaviorItems.EXCESSIVE_DRIVING: 8,
+            self.BehaviorItems.TRAFFIC_INFRACTIONS: 10,
+            self.BehaviorItems.INCIDENTS: 15,
+            self.BehaviorItems.SCHEDULED_BREAKS: 3,
+            self.BehaviorItems.FATIGUE_REPORTING: 5,
+            self.BehaviorItems.REST_STOPS_USAGE: 2,
         }
         
         return points_map.get(self.behavior_item, 1)

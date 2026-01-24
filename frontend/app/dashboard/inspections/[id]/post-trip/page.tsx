@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { isAuthenticated } from '@/lib/api/auth';
 import ProgressTracker from '../../components/ProgressTracker';
 import { RadioOption } from '../../components/FormComponents';
@@ -23,7 +23,7 @@ interface PostTripFormData {
   }>;
   
   // Form 12: Post-Trip Report
-  vehicle_fault_reported: boolean | null;
+  vehicle_fault_submitted: boolean | null;
   fault_notes: string;
   final_inspection_signed: boolean | null;
   compliance_with_policy: boolean | null;
@@ -57,10 +57,10 @@ interface PostTripFormData {
   recommendation: string;
   
   // Form 17: Evaluation Summary
-  pre_trip_score: number | null;
+  pre_trip_inspection_score: number | null;
   driving_conduct_score: number | null;
   incident_management_score: number | null;
-  post_trip_feedback_score: number | null;
+  post_trip_reporting_score: number | null;
   compliance_documentation_score: number | null;
   comments: string;
   
@@ -69,6 +69,37 @@ interface PostTripFormData {
 }
 
 const TOTAL_STEPS = 9;
+
+// Map display labels to backend valid keys
+const BEHAVIOR_KEY_MAP: Record<string, string> = {
+  'Speed in School Zones (≤40 km/hr)': 'speed_school_zone',
+  'Speed in Market Areas (≤40 km/hr)': 'speed_market_area',
+  'Max Speed on Open Road': 'max_speed_open_road',
+  'Railway Crossing Stop': 'railway_crossing',
+  'Toll Gate Stop': 'toll_gate',
+  'Hazardous Zone Speeding': 'hazardous_zone_speed',
+  'Excessive Continuous Driving (>4 hrs)': 'excessive_driving',
+  'Traffic Infractions (RTSA/Police)': 'traffic_infractions',
+  'Incidents/Accidents': 'incidents',
+  'Takes Scheduled Breaks (every 2 hours)': 'scheduled_breaks',
+  'Reports Fatigue/Sleepiness Immediately': 'fatigue_reporting',
+  'Uses Rest Stops and Designated Parking Areas': 'rest_stops_usage',
+};
+
+const DRIVING_BEHAVIOR_KEY_MAP: Record<string, string> = {
+  'Obeys All Traffic Rules and Road Signs': 'obeys_traffic_rules',
+  'Maintains Safe Speed and Following Distance': 'safe_speed_distance',
+  'Avoids Harsh Acceleration, Braking, Cornering': 'avoids_harsh_maneuvers',
+  'Avoids Phone Use/Distraction While Driving': 'no_phone_use',
+  'Keeps Headlights On During Poor Visibility': 'headlights_visibility',
+  'Checks Load Security at Rest Stops': 'load_security',
+  'Reports Abnormal Sounds, Vibrations, Smoke': 'abnormal_sounds_reporting',
+  'Avoids Overloading or Unauthorized Passengers': 'no_overloading',
+  'Reports Breakdowns or Near Misses Promptly': 'breakdown_reporting',
+  'Follows Emergency Procedures for Crashes/Hazards': 'emergency_procedures',
+  'Contacts Control Centre for Route Diversion/Delays': 'contact_control_center',
+};
+
 const VIOLATION_POINTS: Record<string, number> = {
   'Speed in School Zones (≤40 km/hr)': 5,
   'Speed in Market Areas (≤40 km/hr)': 5,
@@ -84,14 +115,25 @@ const VIOLATION_POINTS: Record<string, number> = {
   'Uses Rest Stops and Designated Parking Areas': 2,
 };
 
-export default function PostTripWizard() {
+function PostTripWizardContent() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const inspectionId = params.id as string;
+  const stepFromUrl = searchParams.get('step');
   const [currentStep, setCurrentStep] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [navigating, setNavigating] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [completionInfo, setCompletionInfo] = useState<{ 
+    completed_steps: number[], 
+    next_step: number | null,
+    completion_percentage: number,
+    total_steps: number,
+    is_complete: boolean 
+  } | null>(null);
   
   const [formData, setFormData] = useState<PostTripFormData>({
     behaviors: Object.keys(VIOLATION_POINTS).map(behavior => ({
@@ -107,7 +149,6 @@ export default function PostTripWizard() {
       { behavior: 'Avoids Harsh Acceleration, Braking, Cornering', status: null, remarks: '' },
       { behavior: 'Avoids Phone Use/Distraction While Driving', status: null, remarks: '' },
       { behavior: 'Keeps Headlights On During Poor Visibility', status: null, remarks: '' },
-      { behavior: 'Monitors Temperature, Oil Pressure, Warning Lights', status: null, remarks: '' },
       { behavior: 'Checks Load Security at Rest Stops', status: null, remarks: '' },
       { behavior: 'Reports Abnormal Sounds, Vibrations, Smoke', status: null, remarks: '' },
       { behavior: 'Avoids Overloading or Unauthorized Passengers', status: null, remarks: '' },
@@ -116,7 +157,7 @@ export default function PostTripWizard() {
       { behavior: 'Contacts Control Centre for Route Diversion/Delays', status: null, remarks: '' },
     ],
     
-    vehicle_fault_reported: null,
+    vehicle_fault_submitted: null,
     fault_notes: '',
     final_inspection_signed: null,
     compliance_with_policy: null,
@@ -131,10 +172,10 @@ export default function PostTripWizard() {
     supervisor_remarks: '',
     recommendation: '',
     
-    pre_trip_score: null,
+    pre_trip_inspection_score: null,
     driving_conduct_score: null,
     incident_management_score: null,
-    post_trip_feedback_score: null,
+    post_trip_reporting_score: null,
     compliance_documentation_score: null,
     comments: '',
     
@@ -144,8 +185,286 @@ export default function PostTripWizard() {
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
+      return;
     }
-  }, [router]);
+    
+    // Fetch inspection to get completion info and existing data
+    const fetchInspectionData = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('access_token');
+        const headers = { 'Authorization': `Bearer ${token}` };
+        
+        // Start post-trip (this also returns completion info)
+        const startResponse = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/start_post_trip/`, {
+          method: 'POST',
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        let completionData = null;
+        if (startResponse.ok) {
+          const data = await startResponse.json();
+          console.log('Post-trip started:', data);
+          completionData = data.post_trip_completion_info;
+        }
+        
+        // Set completion info
+        if (completionData) {
+          setCompletionInfo(completionData);
+          
+          // Determine which step to show
+          if (stepFromUrl) {
+            setCurrentStep(parseInt(stepFromUrl));
+          } else {
+            const completedSteps = completionData.completed_steps || [];
+            if (completedSteps.length > 0) {
+              const highestCompleted = Math.max(...completedSteps);
+              const nextAfterHighest = highestCompleted + 1;
+              setCurrentStep(nextAfterHighest <= 9 ? nextAfterHighest : 9);
+            } else {
+              setCurrentStep(1);
+            }
+          }
+        } else if (stepFromUrl) {
+          setCurrentStep(parseInt(stepFromUrl));
+        }
+        
+        // Helper to extract array from API response (handles both array and paginated responses)
+        const getArrayFromResponse = (data: unknown): unknown[] => {
+          if (Array.isArray(data)) return data;
+          if (data && typeof data === 'object' && 'results' in data) {
+            return (data as { results: unknown[] }).results || [];
+          }
+          return [];
+        };
+        
+        // Fetch existing post-trip data to pre-populate form
+        // Fetch trip behaviors (Step 1)
+        const tripBehaviorsRes = await fetch(
+          `http://localhost:8000/api/v1/inspections/${inspectionId}/trip-behaviors/`,
+          { headers }
+        );
+        if (tripBehaviorsRes.ok) {
+          const tripBehaviorsData = await tripBehaviorsRes.json();
+          const tripBehaviors = getArrayFromResponse(tripBehaviorsData);
+          if (tripBehaviors.length > 0) {
+            setFormData(prev => {
+              const updatedBehaviors = prev.behaviors.map(b => {
+                const backendKey = BEHAVIOR_KEY_MAP[b.behavior];
+                const existing = tripBehaviors.find((tb) => (tb as { behavior_item: string }).behavior_item === backendKey) as { behavior_item: string; status: string; notes: string } | undefined;
+                if (existing) {
+                  return {
+                    ...b,
+                    status: existing.status as 'compliant' | 'violation' | 'none' | null,
+                    notes: existing.notes || '',
+                  };
+                }
+                return b;
+              });
+              return { ...prev, behaviors: updatedBehaviors };
+            });
+          }
+        }
+        
+        // Fetch driving behaviors (Step 2)
+        const drivingBehaviorsRes = await fetch(
+          `http://localhost:8000/api/v1/inspections/${inspectionId}/driving-behaviors/`,
+          { headers }
+        );
+        if (drivingBehaviorsRes.ok) {
+          const drivingBehaviorsData = await drivingBehaviorsRes.json();
+          const drivingBehaviors = getArrayFromResponse(drivingBehaviorsData);
+          if (drivingBehaviors.length > 0) {
+            setFormData(prev => {
+              const updatedDrivingBehaviors = prev.driving_behaviors.map(db => {
+                const backendKey = DRIVING_BEHAVIOR_KEY_MAP[db.behavior];
+                const existing = drivingBehaviors.find((dbe) => (dbe as { behavior_item: string }).behavior_item === backendKey) as { behavior_item: string; status: boolean; remarks: string } | undefined;
+                if (existing) {
+                  return {
+                    ...db,
+                    status: existing.status,
+                    remarks: existing.remarks || '',
+                  };
+                }
+                return db;
+              });
+              return { ...prev, driving_behaviors: updatedDrivingBehaviors };
+            });
+          }
+        }
+        
+        // Fetch post-trip report (Step 3)
+        const postTripRes = await fetch(
+          `http://localhost:8000/api/v1/inspections/${inspectionId}/post-trip/`,
+          { headers }
+        );
+        if (postTripRes.ok) {
+          const postTripRaw = await postTripRes.json();
+          const postTripData = getArrayFromResponse(postTripRaw);
+          if (postTripData.length > 0) {
+            const report = postTripData[0] as {
+              vehicle_fault_submitted: boolean;
+              fault_notes: string;
+              final_inspection_signed: boolean;
+              compliance_with_policy: boolean;
+              attitude_cooperation: boolean;
+              incidents_recorded: boolean;
+              incident_notes: string;
+              total_trip_duration: string;
+            };
+            setFormData(prev => ({
+              ...prev,
+              vehicle_fault_submitted: report.vehicle_fault_submitted,
+              fault_notes: report.fault_notes || '',
+              final_inspection_signed: report.final_inspection_signed,
+              compliance_with_policy: report.compliance_with_policy,
+              attitude_cooperation: report.attitude_cooperation,
+              incidents_recorded: report.incidents_recorded,
+              incident_notes: report.incident_notes || '',
+              total_trip_duration: report.total_trip_duration || '',
+            }));
+          }
+        }
+        
+        // Fetch corrective measures (Step 5)
+        const correctiveRes = await fetch(
+          `http://localhost:8000/api/v1/inspections/${inspectionId}/corrective-measures/`,
+          { headers }
+        );
+        if (correctiveRes.ok) {
+          const correctiveRaw = await correctiveRes.json();
+          const correctiveMeasures = getArrayFromResponse(correctiveRaw);
+          if (correctiveMeasures.length > 0) {
+            const mappedMeasures = correctiveMeasures.map((cm) => {
+              const measure = cm as {
+                measure_type: string;
+                required: boolean;
+                due_date: string;
+                completed: boolean;
+                completed_date: string | null;
+                notes: string;
+              };
+              return {
+                measure_type: measure.measure_type,
+                required: measure.required,
+                due_date: measure.due_date || '',
+                completed: measure.completed,
+                completed_date: measure.completed_date || '',
+                notes: measure.notes || '',
+              };
+            });
+            setFormData(prev => ({ ...prev, corrective_measures: mappedMeasures }));
+          }
+        }
+        
+        // Fetch enforcement actions (Step 6)
+        const enforcementRes = await fetch(
+          `http://localhost:8000/api/v1/inspections/${inspectionId}/enforcement-actions/`,
+          { headers }
+        );
+        if (enforcementRes.ok) {
+          const enforcementRaw = await enforcementRes.json();
+          const enforcementActions = getArrayFromResponse(enforcementRaw);
+          if (enforcementActions.length > 0) {
+            const mappedActions = enforcementActions.map((ea) => {
+              const action = ea as {
+                action_type: string;
+                is_applied: boolean;
+                start_date: string;
+                end_date: string | null;
+                notes: string;
+              };
+              return {
+                action_type: action.action_type,
+                is_applied: action.is_applied,
+                start_date: action.start_date || '',
+                end_date: action.end_date || '',
+                notes: action.notes || '',
+              };
+            });
+            setFormData(prev => ({ ...prev, enforcement_actions: mappedActions }));
+          }
+        }
+        
+        // Fetch supervisor remarks (Step 7)
+        const remarksRes = await fetch(
+          `http://localhost:8000/api/v1/inspections/${inspectionId}/supervisor-remarks/`,
+          { headers }
+        );
+        if (remarksRes.ok) {
+          const remarksRaw = await remarksRes.json();
+          const remarksData = getArrayFromResponse(remarksRaw);
+          if (remarksData.length > 0) {
+            const remarks = remarksData[0] as {
+              remarks: string;
+              recommendation: string;
+            };
+            setFormData(prev => ({
+              ...prev,
+              supervisor_remarks: remarks.remarks || '',
+              recommendation: remarks.recommendation || '',
+            }));
+          }
+        }
+        
+        // Fetch evaluation summary (Step 8)
+        const evalRes = await fetch(
+          `http://localhost:8000/api/v1/inspections/${inspectionId}/evaluation/`,
+          { headers }
+        );
+        if (evalRes.ok) {
+          const evalRaw = await evalRes.json();
+          const evalData = getArrayFromResponse(evalRaw);
+          if (evalData.length > 0) {
+            const evaluation = evalData[0] as {
+              pre_trip_inspection_score: number;
+              driving_conduct_score: number;
+              incident_management_score: number;
+              post_trip_reporting_score: number;
+              compliance_documentation_score: number;
+              comments: string;
+            };
+            setFormData(prev => ({
+              ...prev,
+              pre_trip_inspection_score: evaluation.pre_trip_inspection_score,
+              driving_conduct_score: evaluation.driving_conduct_score,
+              incident_management_score: evaluation.incident_management_score,
+              post_trip_reporting_score: evaluation.post_trip_reporting_score,
+              compliance_documentation_score: evaluation.compliance_documentation_score,
+              comments: evaluation.comments || '',
+            }));
+          }
+        }
+        
+        // Fetch sign-offs (Step 9)
+        const signOffsRes = await fetch(
+          `http://localhost:8000/api/v1/inspections/${inspectionId}/sign-offs/`,
+          { headers }
+        );
+        if (signOffsRes.ok) {
+          const signOffsRaw = await signOffsRes.json();
+          const signOffs = getArrayFromResponse(signOffsRaw);
+          const driverSignOff = signOffs.find((so) => (so as { role: string }).role === 'driver') as { role: string; signer_name: string } | undefined;
+          if (driverSignOff) {
+            setFormData(prev => ({
+              ...prev,
+              driver_signature: driverSignOff.signer_name || '',
+            }));
+          }
+        }
+        
+      } catch (err) {
+        console.error('Failed to fetch inspection:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchInspectionData();
+  }, [router, inspectionId, stepFromUrl]);
 
   const calculateRiskScore = () => {
     const totalPoints = formData.behaviors
@@ -153,14 +472,14 @@ export default function PostTripWizard() {
       .reduce((sum, b) => sum + b.points, 0);
     
     let riskLevel = 'Low';
-    let color = '#4CAF50';
+    let color = '#666';
     
     if (totalPoints >= 10) {
       riskLevel = 'High';
-      color = '#f44336';
+      color = '#000';
     } else if (totalPoints >= 4) {
       riskLevel = 'Medium';
-      color = '#FF9800';
+      color = '#333';
     }
     
     return { totalPoints, riskLevel, color };
@@ -168,10 +487,10 @@ export default function PostTripWizard() {
 
   const calculateOverallScore = () => {
     const scores = [
-      formData.pre_trip_score,
+      formData.pre_trip_inspection_score,
       formData.driving_conduct_score,
       formData.incident_management_score,
-      formData.post_trip_feedback_score,
+      formData.post_trip_reporting_score,
       formData.compliance_documentation_score,
     ].filter(s => s !== null) as number[];
     
@@ -179,17 +498,17 @@ export default function PostTripWizard() {
     
     const average = scores.reduce((a, b) => a + b, 0) / scores.length;
     let rating = 'Non-Compliant';
-    let color = '#f44336';
+    let color = '#000';
     
     if (average >= 4.5) {
       rating = 'Excellent';
-      color = '#4CAF50';
+      color = '#000';
     } else if (average >= 3.5) {
       rating = 'Satisfactory';
-      color = '#8BC34A';
+      color = '#333';
     } else if (average >= 2.0) {
       rating = 'Needs Improvement';
-      color = '#FF9800';
+      color = '#666';
     }
     
     return { average: average.toFixed(2), rating, color };
@@ -212,28 +531,28 @@ export default function PostTripWizard() {
         }
         break;
       case 3:
-        if (formData.vehicle_fault_reported === null || formData.final_inspection_signed === null ||
+        if (formData.vehicle_fault_submitted === null || formData.final_inspection_signed === null ||
             formData.compliance_with_policy === null || formData.attitude_cooperation === null ||
             formData.incidents_recorded === null || !formData.total_trip_duration.trim()) {
           setError('Please complete all post-trip report fields');
           return false;
         }
         break;
-      case 6:
+      case 7:
         if (!formData.supervisor_remarks.trim()) {
           setError('Supervisor remarks are required');
           return false;
         }
         break;
-      case 7:
-        if (formData.pre_trip_score === null || formData.driving_conduct_score === null ||
-            formData.incident_management_score === null || formData.post_trip_feedback_score === null ||
+      case 8:
+        if (formData.pre_trip_inspection_score === null || formData.driving_conduct_score === null ||
+            formData.incident_management_score === null || formData.post_trip_reporting_score === null ||
             formData.compliance_documentation_score === null) {
           setError('Please complete all evaluation scores');
           return false;
         }
         break;
-      case 8:
+      case 9:
         if (!formData.driver_signature.trim()) {
           setError('Driver signature is required');
           return false;
@@ -244,16 +563,239 @@ export default function PostTripWizard() {
     return true;
   };
 
-  const handleNext = () => {
-    if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, TOTAL_STEPS));
-      window.scrollTo(0, 0);
+  // Save current step data to backend (uses upsert - creates or updates)
+  const saveCurrentStep = async (): Promise<boolean> => {
+    setSaving(true);
+    setError('');
+    
+    try {
+      const token = localStorage.getItem('access_token');
+      const headers = { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      };
+
+      switch (currentStep) {
+        case 1:
+          // Save trip behaviors (upsert)
+          for (const behavior of formData.behaviors) {
+            const backendKey = BEHAVIOR_KEY_MAP[behavior.behavior];
+            if (!backendKey) {
+              console.error('Unknown behavior:', behavior.behavior);
+              continue;
+            }
+            const response = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/trip-behaviors/`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({
+                behavior_item: backendKey,
+                status: behavior.status,
+                notes: behavior.notes,
+                violation_points: behavior.status === 'violation' ? behavior.points : 0,
+              }),
+            });
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.detail || `Failed to save trip behavior: ${behavior.behavior}`);
+            }
+          }
+          break;
+
+        case 2:
+          // Save driving behaviors
+          for (const behavior of formData.driving_behaviors) {
+            const backendKey = DRIVING_BEHAVIOR_KEY_MAP[behavior.behavior];
+            if (!backendKey) {
+              console.error('Unknown driving behavior:', behavior.behavior);
+              continue;
+            }
+            const response = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/driving-behaviors/`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({
+                behavior_item: backendKey,
+                status: behavior.status,
+                remarks: behavior.remarks,
+              }),
+            });
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.detail || `Failed to save driving behavior: ${behavior.behavior}`);
+            }
+          }
+          break;
+
+        case 3:
+          // Save post-trip report
+          const postTripResponse = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/post-trip/`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              vehicle_fault_submitted: formData.vehicle_fault_submitted,
+              fault_notes: formData.fault_notes,
+              final_inspection_signed: formData.final_inspection_signed,
+              compliance_with_policy: formData.compliance_with_policy,
+              attitude_cooperation: formData.attitude_cooperation,
+              incidents_recorded: formData.incidents_recorded,
+              incident_notes: formData.incident_notes,
+              total_trip_duration: formData.total_trip_duration,
+            }),
+          });
+          if (!postTripResponse.ok) {
+            const errorData = await postTripResponse.json();
+            throw new Error(errorData.detail || 'Failed to save post-trip report');
+          }
+          break;
+
+        case 4:
+          // Save Risk Score Summary - the backend auto-calculates from trip behaviors
+          const riskScoreResponse = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/risk-score/`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({}),  // Empty body - backend auto-calculates
+          });
+          if (!riskScoreResponse.ok) {
+            const errorData = await riskScoreResponse.json();
+            throw new Error(errorData.detail || 'Failed to save risk score');
+          }
+          break;
+
+        case 5:
+          // Save corrective measures
+          for (const measure of formData.corrective_measures) {
+            const response = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/corrective-measures/`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify(measure),
+            });
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.detail || 'Failed to save corrective measure');
+            }
+          }
+          break;
+
+        case 6:
+          // Save enforcement actions
+          for (const action of formData.enforcement_actions) {
+            const response = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/enforcement-actions/`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify(action),
+            });
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.detail || 'Failed to save enforcement action');
+            }
+          }
+          break;
+
+        case 7:
+          // Save supervisor remarks
+          const remarksResponse = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/supervisor-remarks/`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              remarks: formData.supervisor_remarks,
+              recommendation: formData.recommendation,
+            }),
+          });
+          if (!remarksResponse.ok) {
+            const errorData = await remarksResponse.json();
+            throw new Error(errorData.detail || 'Failed to save supervisor remarks');
+          }
+          break;
+
+        case 8:
+          // Save evaluation
+          const evalResponse = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/evaluation/`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              pre_trip_inspection_score: formData.pre_trip_inspection_score,
+              driving_conduct_score: formData.driving_conduct_score,
+              incident_management_score: formData.incident_management_score,
+              post_trip_reporting_score: formData.post_trip_reporting_score,
+              compliance_documentation_score: formData.compliance_documentation_score,
+              comments: formData.comments,
+            }),
+          });
+          if (!evalResponse.ok) {
+            const errorData = await evalResponse.json();
+            throw new Error(errorData.detail || 'Failed to save evaluation');
+          }
+          break;
+
+        case 9:
+          // Save driver sign-off (final step)
+          const signOffResponse = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/sign-offs/`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              role: 'driver',
+              signer_name: formData.driver_signature,
+            }),
+          });
+          if (!signOffResponse.ok) {
+            const errorData = await signOffResponse.json();
+            throw new Error(errorData.detail || 'Failed to save driver sign-off');
+          }
+          break;
+      }
+
+      // Refresh completion info after successful save
+      try {
+        const token = localStorage.getItem('access_token');
+        const completionRes = await fetch(
+          `http://localhost:8000/api/v1/inspections/${inspectionId}/`,
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        if (completionRes.ok) {
+          const inspectionData = await completionRes.json();
+          console.log('Refreshed completion info:', inspectionData.post_trip_completion_info);
+          if (inspectionData.post_trip_completion_info) {
+            setCompletionInfo(inspectionData.post_trip_completion_info);
+          }
+        }
+      } catch (refreshErr) {
+        console.error('Error refreshing completion info:', refreshErr);
+      }
+
+      return true;
+    } catch (err) {
+      setError(`Failed to save: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      return false;
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handlePrevious = () => {
+  const handleNext = async () => {
+    if (!validateStep(currentStep)) return;
+    
+    setNavigating(true);
+    // Save current step data
+    const saved = await saveCurrentStep();
+    if (!saved) {
+      setNavigating(false);
+      return;
+    }
+    
+    // Move to next step
+    setCurrentStep(prev => Math.min(prev + 1, TOTAL_STEPS));
+    setNavigating(false);
+    window.scrollTo(0, 0);
+  };
+
+  const handlePrevious = async () => {
     setError('');
+    setNavigating(true);
+    
+    // Save current step data before going back (so changes aren't lost)
+    await saveCurrentStep();
+    
     setCurrentStep(prev => Math.max(prev - 1, 1));
+    setNavigating(false);
     window.scrollTo(0, 0);
   };
 
@@ -270,119 +812,36 @@ export default function PostTripWizard() {
         'Authorization': `Bearer ${token}`,
       };
 
-      // Save trip behaviors
-      for (const behavior of formData.behaviors) {
-        await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/trip-behaviors/`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            inspection: inspectionId,
-            behavior_item: behavior.behavior,
-            status: behavior.status,
-            notes: behavior.notes,
-            violation_points: behavior.status === 'violation' ? behavior.points : 0,
-          }),
-        });
-      }
-
-      // Save driving behaviors
-      for (const behavior of formData.driving_behaviors) {
-        await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/driving-behaviors/`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            inspection: inspectionId,
-            behavior_item: behavior.behavior,
-            compliant: behavior.status,
-            remarks: behavior.remarks,
-          }),
-        });
-      }
-
-      // Save post-trip report
-      await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/post-trip/`, {
+      // Save driver sign-off (final step)
+      const signOffResponse = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/sign-offs/`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          inspection: inspectionId,
-          vehicle_fault_reported: formData.vehicle_fault_reported,
-          fault_notes: formData.fault_notes,
-          final_inspection_signed: formData.final_inspection_signed,
-          compliance_with_policy: formData.compliance_with_policy,
-          attitude_cooperation: formData.attitude_cooperation,
-          incidents_recorded: formData.incidents_recorded,
-          incident_notes: formData.incident_notes,
-          total_trip_duration: formData.total_trip_duration,
+          role: 'driver',
+          signer_name: formData.driver_signature,
         }),
       });
-
-      // Save corrective measures
-      for (const measure of formData.corrective_measures) {
-        await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/corrective-measures/`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            inspection: inspectionId,
-            ...measure,
-          }),
-        });
+      
+      if (!signOffResponse.ok) {
+        const errorData = await signOffResponse.json();
+        throw new Error(errorData.detail || 'Failed to save driver sign-off');
       }
 
-      // Save enforcement actions
-      for (const action of formData.enforcement_actions) {
-        await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/enforcement-actions/`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            inspection: inspectionId,
-            ...action,
-          }),
-        });
-      }
-
-      // Save supervisor remarks
-      await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/supervisor-remarks/`, {
-        method: 'POST',
+      // Update inspection status to completed
+      await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/`, {
+        method: 'PATCH',
         headers,
         body: JSON.stringify({
-          inspection: inspectionId,
-          remarks: formData.supervisor_remarks,
-          recommendation: formData.recommendation,
+          status: 'post_trip_completed',
         }),
       });
 
-      // Save evaluation
-      await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/evaluation/`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          inspection: inspectionId,
-          pre_trip_score: formData.pre_trip_score,
-          driving_conduct_score: formData.driving_conduct_score,
-          incident_management_score: formData.incident_management_score,
-          post_trip_feedback_score: formData.post_trip_feedback_score,
-          compliance_documentation_score: formData.compliance_documentation_score,
-          comments: formData.comments,
-        }),
-      });
-
-      // Save driver sign-off
-      await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/sign-offs/`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          inspection: inspectionId,
-          signer_type: 'driver',
-          signature_data: formData.driver_signature,
-        }),
-      });
-
-      setSuccess('Post-trip inspection completed successfully! Redirecting...');
+      setSuccess('Post-trip inspection completed successfully! Redirecting to report...');
       setTimeout(() => {
-        router.push('/dashboard/inspections');
+        router.push(`/dashboard/inspections/${inspectionId}/report`);
       }, 2000);
     } catch (err) {
-      setError(`Failed to submit post-trip: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setError(`Failed to submit: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -409,7 +868,7 @@ export default function PostTripWizard() {
       corrective_measures: [
         ...formData.corrective_measures,
         {
-          measure_type: 'Safety Training',
+          measure_type: 'safety_training',
           required: true,
           due_date: '',
           completed: false,
@@ -426,7 +885,7 @@ export default function PostTripWizard() {
       enforcement_actions: [
         ...formData.enforcement_actions,
         {
-          action_type: 'Verbal Warning',
+          action_type: 'verbal_warning',
           is_applied: false,
           start_date: '',
           end_date: '',
@@ -560,14 +1019,14 @@ export default function PostTripWizard() {
                 <RadioOption
                   label="Yes"
                   value="yes"
-                  selected={formData.vehicle_fault_reported === true}
-                  onChange={() => setFormData({ ...formData, vehicle_fault_reported: true })}
+                  selected={formData.vehicle_fault_submitted === true}
+                  onChange={() => setFormData({ ...formData, vehicle_fault_submitted: true })}
                 />
                 <RadioOption
                   label="No"
                   value="no"
-                  selected={formData.vehicle_fault_reported === false}
-                  onChange={() => setFormData({ ...formData, vehicle_fault_reported: false })}
+                  selected={formData.vehicle_fault_submitted === false}
+                  onChange={() => setFormData({ ...formData, vehicle_fault_submitted: false })}
                 />
               </div>
               <textarea
@@ -706,10 +1165,10 @@ export default function PostTripWizard() {
                       setFormData({ ...formData, corrective_measures: updated });
                     }}
                   >
-                    <option value="Safety Training">Safety Training</option>
-                    <option value="Performance Review">Performance Review</option>
-                    <option value="Probationary Period">Probationary Period</option>
-                    <option value="Policy Acknowledgment">Policy Acknowledgment</option>
+                    <option value="safety_training">Safety Training</option>
+                    <option value="performance_review">Performance Review</option>
+                    <option value="probationary_period">Probationary Period</option>
+                    <option value="policy_acknowledgment">Policy Acknowledgment</option>
                   </select>
                 </div>
                 <div style={{ marginBottom: '15px' }}>
@@ -794,12 +1253,12 @@ export default function PostTripWizard() {
                       setFormData({ ...formData, enforcement_actions: updated });
                     }}
                   >
-                    <option value="Verbal Warning">Verbal Warning</option>
-                    <option value="Written Warning">Written Warning</option>
-                    <option value="Suspension">Suspension</option>
-                    <option value="Final Warning">Final Warning</option>
-                    <option value="Termination">Termination</option>
-                    <option value="Other">Other</option>
+                    <option value="verbal_warning">Verbal Warning</option>
+                    <option value="written_warning">Written Warning</option>
+                    <option value="suspension">Suspension</option>
+                    <option value="final_warning">Final Warning</option>
+                    <option value="termination">Termination</option>
+                    <option value="other">Other</option>
                   </select>
                 </div>
                 <div style={{ marginBottom: '15px' }}>
@@ -911,17 +1370,17 @@ export default function PostTripWizard() {
             </p>
             
             {[
-              { key: 'pre_trip_score', label: 'Pre-Trip Inspection Score' },
+              { key: 'pre_trip_inspection_score', label: 'Pre-Trip Inspection Score' },
               { key: 'driving_conduct_score', label: 'Driving Conduct Score' },
               { key: 'incident_management_score', label: 'Incident Management Score' },
-              { key: 'post_trip_feedback_score', label: 'Post-Trip Feedback & Reporting Score' },
+              { key: 'post_trip_reporting_score', label: 'Post-Trip Feedback & Reporting Score' },
               { key: 'compliance_documentation_score', label: 'Compliance & Documentation Score' },
             ].map(({ key, label }) => (
               <div key={key} style={{ marginBottom: '25px' }}>
                 <label style={{ display: 'block', fontWeight: '600', color: '#000', marginBottom: '10px' }}>
                   {label} *
                 </label>
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                   {[1, 2, 3, 4, 5].map(score => (
                     <button
                       key={score}
@@ -936,6 +1395,10 @@ export default function PostTripWizard() {
                         fontSize: '20px',
                         fontWeight: 'bold',
                         cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 0,
                       }}
                     >
                       {score}
@@ -1050,13 +1513,56 @@ export default function PostTripWizard() {
     }
   };
 
+  if (loading && !completionInfo) {
+    return (
+      <div className="dashboard-container">
+        <div className="dashboard-header">
+          <div>
+            <h1>Post-Trip Checklist</h1>
+            <p style={{ color: '#666', marginTop: '5px' }}>Loading your progress...</p>
+          </div>
+        </div>
+        <div className="profile-card">
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            padding: '60px 20px',
+            gap: '20px'
+          }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              border: '4px solid #e0e0e0',
+              borderTopColor: '#000',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+            }} />
+            <p style={{ color: '#666', margin: 0 }}>Loading inspection data...</p>
+            <style>{`
+              @keyframes spin {
+                to { transform: rotate(360deg); }
+              }
+            `}</style>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
         <div>
-          <h1>Post-Trip Inspection</h1>
+          <h1>Post-Trip Checklist</h1>
           <p style={{ color: '#666', marginTop: '5px' }}>
             Complete all post-trip sections after journey completion
+            {completionInfo && (
+              <span style={{ marginLeft: '15px', fontWeight: '600', color: '#4CAF50' }}>
+                • {completionInfo.completed_steps.length}/{completionInfo.total_steps} sections complete
+              </span>
+            )}
           </p>
         </div>
         <button 
@@ -1064,7 +1570,7 @@ export default function PostTripWizard() {
           className="button-secondary"
           style={{ width: 'auto' }}
         >
-          Cancel
+          Back to Inspections
         </button>
       </div>
 
@@ -1072,6 +1578,7 @@ export default function PostTripWizard() {
         <ProgressTracker 
           currentStep={currentStep} 
           totalSteps={TOTAL_STEPS}
+          completedSteps={completionInfo?.completed_steps}
         />
 
         {error && <div className="alert alert-error" style={{ marginBottom: '20px' }}>{error}</div>}
@@ -1088,38 +1595,135 @@ export default function PostTripWizard() {
         }}>
           <button
             onClick={handlePrevious}
-            disabled={currentStep === 1 || loading}
+            disabled={currentStep === 1 || navigating || saving}
             className="button-secondary"
             style={{ 
               width: 'auto',
+              minWidth: '120px',
               opacity: currentStep === 1 ? 0.5 : 1,
-              cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
+              cursor: currentStep === 1 || navigating || saving ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
             }}
           >
-            Previous
+            {navigating && currentStep > 1 ? (
+              <>
+                <span style={{
+                  width: '16px',
+                  height: '16px',
+                  border: '2px solid #ccc',
+                  borderTopColor: '#333',
+                  borderRadius: '50%',
+                  animation: 'spin 0.8s linear infinite',
+                }} />
+                Saving...
+              </>
+            ) : 'Previous'}
           </button>
 
           {currentStep < TOTAL_STEPS ? (
             <button
               onClick={handleNext}
-              disabled={loading}
+              disabled={navigating || saving}
               className="button-primary"
-              style={{ width: 'auto' }}
+              style={{ 
+                width: 'auto',
+                minWidth: '120px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+              }}
             >
-              Next
+              {(navigating || saving) && currentStep < TOTAL_STEPS ? (
+                <>
+                  <span style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    borderTopColor: '#fff',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite',
+                  }} />
+                  Saving...
+                </>
+              ) : 'Next'}
             </button>
           ) : (
             <button
               onClick={handleSubmit}
-              disabled={loading}
+              disabled={saving || navigating}
               className="button-primary"
-              style={{ width: 'auto' }}
+              style={{ 
+                width: 'auto',
+                minWidth: '150px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+              }}
             >
-              {loading ? 'Submitting...' : 'Submit Post-Trip'}
+              {saving ? (
+                <>
+                  <span style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    borderTopColor: '#fff',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite',
+                  }} />
+                  Submitting...
+                </>
+              ) : 'Submit Post-Trip'}
             </button>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PostTripWizard() {
+  return (
+    <Suspense fallback={
+      <div className="dashboard-container">
+        <div className="dashboard-header">
+          <div>
+            <h1>Post-Trip Checklist</h1>
+            <p style={{ color: '#666', marginTop: '5px' }}>Loading your progress...</p>
+          </div>
+        </div>
+        <div className="profile-card">
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            padding: '60px 20px',
+            gap: '20px'
+          }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              border: '4px solid #e0e0e0',
+              borderTopColor: '#000',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+            }} />
+            <p style={{ color: '#666', margin: 0 }}>Loading...</p>
+            <style>{`
+              @keyframes spin {
+                to { transform: rotate(360deg); }
+              }
+            `}</style>
+          </div>
+        </div>
+      </div>
+    }>
+      <PostTripWizardContent />
+    </Suspense>
   );
 }

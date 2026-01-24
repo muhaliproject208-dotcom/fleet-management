@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from ..models import InspectionSignOff
+from ..models.signoff import SignOffRole
 
 
 class InspectionSignOffSerializer(serializers.ModelSerializer):
@@ -18,7 +19,7 @@ class InspectionSignOffSerializer(serializers.ModelSerializer):
     
     def validate_role(self, value):
         """Validate role is valid"""
-        valid_roles = InspectionSignOff.SignOffRole.values
+        valid_roles = SignOffRole.values
         if value not in valid_roles:
             raise serializers.ValidationError(
                 f'Invalid role. Must be one of: {", ".join(valid_roles)}'
@@ -30,17 +31,3 @@ class InspectionSignOffSerializer(serializers.ModelSerializer):
         if not value or not value.strip():
             raise serializers.ValidationError('Signer name is required.')
         return value.strip()
-    
-    def validate(self, attrs):
-        """Check for duplicate sign-offs"""
-        inspection = self.context.get('inspection')
-        role = attrs.get('role')
-        
-        if inspection and role:
-            # Check if sign-off already exists for this role
-            if InspectionSignOff.objects.filter(inspection=inspection, role=role).exists():
-                raise serializers.ValidationError({
-                    'role': f'A sign-off for {role} already exists for this inspection.'
-                })
-        
-        return attrs

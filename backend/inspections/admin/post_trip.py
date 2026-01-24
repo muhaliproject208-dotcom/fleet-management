@@ -4,7 +4,13 @@ from ..models import PostTripReport, RiskScoreSummary
 
 @admin.register(PostTripReport)
 class PostTripReportAdmin(admin.ModelAdmin):
-    """Admin configuration for PostTripReport model"""
+    """
+    Admin configuration for PostTripReport model.
+    
+    Note: To edit all post-trip related data (behaviors, risk scores, evaluations, etc.),
+    use the PreTripInspection admin which has all inlines since these models are linked
+    to the inspection, not directly to the PostTripReport.
+    """
     
     list_display = [
         'get_inspection_id',
@@ -31,7 +37,6 @@ class PostTripReportAdmin(admin.ModelAdmin):
     ]
     
     readonly_fields = [
-        'inspection',
         'created_at',
         'updated_at'
     ]
@@ -67,8 +72,8 @@ class PostTripReportAdmin(admin.ModelAdmin):
     get_inspection_id.admin_order_field = 'inspection__inspection_id'
     
     def has_delete_permission(self, request, obj=None):
-        """Disable delete permission in admin"""
-        return False
+        """Allow delete permission in admin"""
+        return True
 
 
 @admin.register(RiskScoreSummary)

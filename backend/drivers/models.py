@@ -45,9 +45,9 @@ class Driver(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['driver_id']),
-            models.Index(fields=['license_number']),
-            models.Index(fields=['is_active']),
+            models.Index(fields=['driver_id'], name='drivers_driver_id_idx'),
+            models.Index(fields=['license_number'], name='drivers_license_idx'),
+            models.Index(fields=['is_active'], name='drivers_dri_is_acti_7c5f39_idx'),
         ]
         verbose_name = 'Driver'
         verbose_name_plural = 'Drivers'
@@ -91,3 +91,33 @@ class Driver(models.Model):
         """Soft delete by setting is_active to False"""
         self.is_active = False
         self.save()
+    
+    def get_average_risk_score(self):
+        """Calculate average risk score across all completed trips"""
+        from django.db.models import Avg
+        from inspections.models import PreTripInspection, RiskScoreSummary
+        
+        # Get all approved inspections for this driver that have risk scores
+        inspections = PreTripInspection.objects.filter(
+            driver=self,
+            status__in=['approved', 'post_trip_completed']
+        ).values_list('id', flat=True)
+        
+        # Calculate average of total_points_this_trip
+        avg = RiskScoreSummary.objects.filter(
+            inspection_id__in=inspections
+        ).aggregate(avg_score=Avg('total_points_this_trip'))['avg_score']
+        
+        return round(avg, 2) if avg is not None else None
+    
+    def get_risk_level(self):
+        """Get risk level based on average risk score"""
+        avg_score = self.get_average_risk_score()
+        if avg_score is None:
+            return 'N/A'
+        elif avg_score <= 3:
+            return 'Low'
+        elif avg_score <= 9:
+            return 'Medium'
+        else:
+            return 'High'

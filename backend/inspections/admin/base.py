@@ -17,7 +17,6 @@ from ..models import (
 class HealthFitnessCheckInline(admin.StackedInline):
     model = HealthFitnessCheck
     extra = 0
-    can_delete = False
     fields = (
         'alcohol_test_status', 'alcohol_test_remarks',
         'temperature_check_status', 'temperature_value',
@@ -29,7 +28,6 @@ class HealthFitnessCheckInline(admin.StackedInline):
 class DocumentationComplianceInline(admin.StackedInline):
     model = DocumentationCompliance
     extra = 0
-    can_delete = False
     fields = (
         'certificate_of_fitness', 'road_tax_valid', 'insurance_valid',
         'trip_authorization_signed', 'logbook_present', 'driver_handbook_present',
@@ -85,7 +83,6 @@ class DrivingBehaviorCheckInline(admin.TabularInline):
 class PostTripReportInline(admin.StackedInline):
     model = PostTripReport
     extra = 0
-    can_delete = False
     fields = (
         'vehicle_fault_submitted', 'fault_notes',
         'final_inspection_signed', 'compliance_with_policy',
@@ -97,7 +94,6 @@ class PostTripReportInline(admin.StackedInline):
 class RiskScoreSummaryInline(admin.StackedInline):
     model = RiskScoreSummary
     extra = 0
-    can_delete = False
     readonly_fields = (
         'total_points_this_trip', 'risk_level',
         'total_points_30_days', 'risk_level_30_days'
@@ -120,14 +116,12 @@ class EnforcementActionInline(admin.TabularInline):
 class SupervisorRemarksInline(admin.StackedInline):
     model = SupervisorRemarks
     extra = 0
-    can_delete = False
     fields = ('supervisor_name', 'remarks', 'recommendation')
 
 
 class EvaluationSummaryInline(admin.StackedInline):
     model = EvaluationSummary
     extra = 0
-    can_delete = False
     readonly_fields = ('overall_performance',)
     fields = (
         'pre_trip_inspection_score', 'driving_conduct_score',
@@ -139,7 +133,6 @@ class EvaluationSummaryInline(admin.StackedInline):
 class InspectionSignOffInline(admin.TabularInline):
     model = InspectionSignOff
     extra = 0
-    can_delete = False
     readonly_fields = ('signed_at',)
     fields = ('role', 'signer_name', 'signed_at')
 

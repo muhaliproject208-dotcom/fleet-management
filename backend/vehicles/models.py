@@ -52,9 +52,9 @@ class Vehicle(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['vehicle_id']),
-            models.Index(fields=['registration_number']),
-            models.Index(fields=['is_active']),
+            models.Index(fields=['vehicle_id'], name='vehicles_vehicle_id_idx'),
+            models.Index(fields=['registration_number'], name='vehicles_registration_idx'),
+            models.Index(fields=['is_active'], name='vehicles_ve_is_acti_53dbe5_idx'),
         ]
         verbose_name = 'Vehicle'
         verbose_name_plural = 'Vehicles'

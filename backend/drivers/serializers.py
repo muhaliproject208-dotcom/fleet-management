@@ -18,6 +18,8 @@ class CreatedBySerializer(serializers.ModelSerializer):
 
 class DriverListSerializer(serializers.ModelSerializer):
     """Serializer for listing drivers (compact view)"""
+    average_risk_score = serializers.SerializerMethodField()
+    risk_level = serializers.SerializerMethodField()
     
     class Meta:
         model = Driver
@@ -27,9 +29,19 @@ class DriverListSerializer(serializers.ModelSerializer):
             'full_name',
             'license_number',
             'phone_number',
-            'is_active'
+            'is_active',
+            'average_risk_score',
+            'risk_level'
         ]
-        read_only_fields = ['id', 'driver_id']
+        read_only_fields = ['id', 'driver_id', 'average_risk_score', 'risk_level']
+    
+    def get_average_risk_score(self, obj):
+        """Get average risk score for driver"""
+        return obj.get_average_risk_score()
+    
+    def get_risk_level(self, obj):
+        """Get risk level for driver"""
+        return obj.get_risk_level()
     
     def validate_license_number(self, value):
         """Validate license number format and uniqueness"""
@@ -73,6 +85,8 @@ class DriverListSerializer(serializers.ModelSerializer):
 class DriverDetailSerializer(serializers.ModelSerializer):
     """Serializer for detailed driver view with all fields"""
     created_by = CreatedBySerializer(read_only=True)
+    average_risk_score = serializers.SerializerMethodField()
+    risk_level = serializers.SerializerMethodField()
     
     class Meta:
         model = Driver
@@ -84,11 +98,21 @@ class DriverDetailSerializer(serializers.ModelSerializer):
             'phone_number',
             'email',
             'is_active',
+            'average_risk_score',
+            'risk_level',
             'created_at',
             'updated_at',
             'created_by'
         ]
-        read_only_fields = ['id', 'driver_id', 'created_at', 'updated_at', 'created_by']
+        read_only_fields = ['id', 'driver_id', 'created_at', 'updated_at', 'created_by', 'average_risk_score', 'risk_level']
+    
+    def get_average_risk_score(self, obj):
+        """Get average risk score for driver"""
+        return obj.get_average_risk_score()
+    
+    def get_risk_level(self, obj):
+        """Get risk level for driver"""
+        return obj.get_risk_level()
     
     def validate_license_number(self, value):
         """Validate license number format and uniqueness"""

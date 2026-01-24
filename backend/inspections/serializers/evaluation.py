@@ -16,7 +16,7 @@ class SupervisorRemarksSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at'
         ]
-        read_only_fields = ['id', 'inspection', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'inspection', 'supervisor_name', 'created_at', 'updated_at']
 
 
 class EvaluationSummarySerializer(serializers.ModelSerializer):

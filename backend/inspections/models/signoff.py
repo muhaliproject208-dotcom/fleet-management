@@ -37,7 +37,7 @@ class InspectionSignOff(models.Model):
         ordering = ['-signed_at']
         verbose_name = 'Inspection Sign-Off'
         verbose_name_plural = 'Inspection Sign-Offs'
-        unique_together = ('inspection', 'role')
+        # Only use UniqueConstraint, not unique_together (to avoid duplicate indexes)
         constraints = [
             models.UniqueConstraint(
                 fields=['inspection', 'role'],

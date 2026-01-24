@@ -42,8 +42,8 @@ class Mechanic(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['mechanic_id']),
-            models.Index(fields=['is_active']),
+            models.Index(fields=['mechanic_id'], name='mechanics_mechanic_id_idx'),
+            models.Index(fields=['is_active'], name='mechanics_m_is_acti_03eba4_idx'),
         ]
         verbose_name = 'Mechanic'
         verbose_name_plural = 'Mechanics'

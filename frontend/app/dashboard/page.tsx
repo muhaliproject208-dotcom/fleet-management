@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { getProfile, logout, getCurrentUser, isAuthenticated, User } from '@/lib/api/auth';
 import { getDrivers, Driver } from '@/lib/api/drivers';
 import { getVehicles, Vehicle } from '@/lib/api/vehicles';
@@ -13,8 +12,6 @@ export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -89,17 +86,6 @@ export default function DashboardPage() {
     void fetchDashboardData();
   }, []);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   const handleLogout = async () => {
     await logout();
     router.push('/login');
@@ -136,79 +122,7 @@ export default function DashboardPage() {
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
-        <div>
-          <h1>{getRoleName(user.role)} Dashboard</h1>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', position: 'relative' }}>
-          <div ref={dropdownRef} style={{ position: 'relative' }}>
-            <button
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="button-secondary"
-              style={{ 
-                width: '40px',
-                height: '40px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '0',
-                borderRadius: '50%'
-              }}
-              title="Settings"
-            >
-              <span className="material-icons" style={{ fontSize: '24px' }}>
-                settings
-              </span>
-            </button>
-            {dropdownOpen && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  right: 0,
-                  marginTop: '8px',
-                  backgroundColor: 'white',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  minWidth: '200px',
-                  zIndex: 1000,
-                }}
-              >
-                <Link
-                  href="/dashboard/profile"
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    padding: '12px 16px',
-                    textAlign: 'left',
-                    textDecoration: 'none',
-                    color: 'inherit',
-                    fontSize: '14px',
-                    borderBottom: '1px solid #eee',
-                  }}
-                >
-                  View Profile
-                </Link>
-                <Link
-                  href="/dashboard/account-settings"
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    padding: '12px 16px',
-                    textAlign: 'left',
-                    textDecoration: 'none',
-                    color: 'inherit',
-                    fontSize: '14px',
-                  }}
-                >
-                  Account Settings
-                </Link>
-              </div>
-            )}
-          </div>
-          <button onClick={handleLogout} className="button-secondary" style={{ width: 'auto' }}>
-            Logout
-          </button>
-        </div>
+        <h1>{getRoleName(user.role)} Dashboard</h1>
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
@@ -412,7 +326,7 @@ export default function DashboardPage() {
               <h3 style={{ margin: 0, color: '#000' }}>Pre-Trip Checklist</h3>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
-              <span className="material-icons" style={{ fontSize: '48px', marginBottom: '10px', color: '#4CAF50' }}>
+              <span className="material-icons" style={{ fontSize: '48px', marginBottom: '10px', color: '#000' }}>
                 checklist
               </span>
               <p style={{ textAlign: 'center', color: '#000', marginBottom: '10px' }}>Driver & Vehicle Inspection</p>
@@ -423,12 +337,12 @@ export default function DashboardPage() {
                 <button
                   onClick={() => router.push('/dashboard/inspections/new')}
                   className="button-primary"
-                  style={{ width: 'auto', fontSize: '14px', padding: '8px 16px' }}
+                  style={{ width: 'auto', fontSize: '14px', padding: '8px 16px', backgroundColor: '#000', borderColor: '#000' }}
                 >
                   Create New
                 </button>
                 <button
-                  onClick={() => router.push('/dashboard/inspections?type=pre-trip')}
+                  onClick={() => router.push('/dashboard/inspections')}
                   className="button-secondary"
                   style={{ width: 'auto', fontSize: '14px', padding: '8px 16px' }}
                 >
@@ -438,81 +352,103 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Awaiting Trip Completion */}
-          <div 
-            onClick={() => router.push('/dashboard/inspections?status=approved')}
-            className="profile-card" 
-            style={{ 
-              cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              transition: 'transform 0.2s',
-              minHeight: '200px',
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.transform = 'translateY(-2px)')}
-            onMouseOut={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-              <h3 style={{ margin: 0, color: '#000' }}>Awaiting Trip End</h3>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
-              <span className="material-icons" style={{ fontSize: '48px', marginBottom: '10px', color: '#2196F3' }}>
-                local_shipping
-              </span>
-              <p style={{ textAlign: 'center', color: '#000', marginBottom: '10px' }}>Trips In Progress</p>
-              <p style={{ fontSize: '14px', color: '#666', textAlign: 'center', padding: '0 20px' }}>
-                Pre-trip approved, awaiting trip completion for post-trip checklist
-              </p>
-            </div>
-          </div>
-
           {/* Post-Trip Inspections */}
           <div 
-            onClick={() => router.push('/dashboard/inspections?type=post-trip')}
             className="profile-card" 
             style={{ 
-              cursor: 'pointer',
               display: 'flex',
               flexDirection: 'column',
-              transition: 'transform 0.2s',
               minHeight: '200px',
             }}
-            onMouseOver={(e) => (e.currentTarget.style.transform = 'translateY(-2px)')}
-            onMouseOut={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
               <h3 style={{ margin: 0, color: '#000' }}>Post-Trip Checklist</h3>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
-              <span className="material-icons" style={{ fontSize: '48px', marginBottom: '10px', color: '#FF9800' }}>
+              <span className="material-icons" style={{ fontSize: '48px', marginBottom: '10px', color: '#000' }}>
                 assignment_turned_in
               </span>
               <p style={{ textAlign: 'center', color: '#000', marginBottom: '10px' }}>Trip Completion & Evaluation</p>
-              <p style={{ fontSize: '14px', color: '#666', textAlign: 'center', padding: '0 20px' }}>
+              <p style={{ fontSize: '14px', color: '#666', textAlign: 'center', padding: '0 20px', marginBottom: '20px' }}>
                 Report incidents, evaluate performance, and complete post-trip assessment
+              </p>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => router.push('/dashboard/inspections?status=approved')}
+                  className="button-primary"
+                  style={{ width: 'auto', fontSize: '14px', padding: '8px 16px', backgroundColor: '#000', borderColor: '#000' }}
+                >
+                  View Approved
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Inspection Reports */}
+          <div 
+            onClick={() => router.push('/dashboard/reports')}
+            className="profile-card" 
+            style={{ 
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              transition: 'transform 0.2s',
+              minHeight: '200px',
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.transform = 'translateY(-2px)')}
+            onMouseOut={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0, color: '#000' }}>Reports</h3>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
+              <span className="material-icons" style={{ fontSize: '48px', marginBottom: '10px', color: '#000' }}>
+                summarize
+              </span>
+              <p style={{ textAlign: 'center', color: '#000', marginBottom: '10px' }}>Completed Inspections</p>
+              <p style={{ fontSize: '14px', color: '#666', textAlign: 'center', padding: '0 20px' }}>
+                View approved reports, download PDFs, and review evaluation scores
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {user.role === 'fleet_manager' && (
-        <div className="profile-card" style={{ marginTop: '30px' }}>
-          <h2>Fleet Manager Dashboard</h2>
-          <p style={{ color: '#000' }}>
-            Welcome to your Fleet Manager dashboard. Vehicle and fleet management features will be available here soon.
+      {/* Role Info Section */}
+      <div style={{ marginTop: '30px' }}>
+        <div className="profile-card">
+          <p style={{ color: '#666', margin: '0 0 15px 0' }}>
+            Logged in as: <strong style={{ color: '#000' }}>{getRoleName(user.role)}</strong>
           </p>
+          <p style={{ color: '#000', margin: '0 0 10px 0', fontWeight: '500' }}>What you can do:</p>
+          <ul style={{ color: '#666', margin: 0, paddingLeft: '20px', lineHeight: '1.8' }}>
+            {user.role === 'fleet_manager' && (
+              <>
+                <li>Review and approve submitted pre-trip inspections</li>
+                <li>View and download completed inspection reports (PDF)</li>
+                <li>Manage drivers, vehicles, and mechanics</li>
+                <li>Monitor fleet compliance and safety records</li>
+              </>
+            )}
+            {user.role === 'transport_supervisor' && (
+              <>
+                <li>Create new pre-trip inspections</li>
+                <li>Complete post-trip inspection forms</li>
+                <li>Track your submitted inspections</li>
+                <li>View inspection history and status</li>
+              </>
+            )}
+            {user.role === 'superuser' && (
+              <>
+                <li>View and manage all inspections</li>
+                <li>Access all system reports and analytics</li>
+                <li>Manage users, drivers, vehicles, and mechanics</li>
+                <li>Configure system settings</li>
+              </>
+            )}
+          </ul>
         </div>
-      )}
-
-      {user.role === 'transport_supervisor' && (
-        <div className="profile-card" style={{ marginTop: '30px' }}>
-          <h2>Transport Supervisor Dashboard</h2>
-          <p style={{ color: '#000' }}>
-            Welcome to your Transport Supervisor dashboard. Trip monitoring and scheduling features will be available here soon.
-          </p>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -193,34 +193,64 @@ export default function DriversPage() {
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>License Number</th>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Phone</th>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Email</th>
+                <th style={{ padding: '12px', textAlign: 'center', fontWeight: '600' }}>Avg Risk Score</th>
+                <th style={{ padding: '12px', textAlign: 'center', fontWeight: '600' }}>Risk Level</th>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Status</th>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {drivers.map((driver) => (
-                <tr key={driver.id} style={{ borderBottom: '1px solid #ddd' }}>
-                  <td style={{ padding: '12px', color: '#000' }}>{driver.driver_id}</td>
-                  <td style={{ padding: '12px', color: '#000' }}>{driver.full_name}</td>
-                  <td style={{ padding: '12px', color: '#000' }}>{driver.license_number}</td>
-                  <td style={{ padding: '12px', color: '#000' }}>{driver.phone_number}</td>
-                  <td style={{ padding: '12px', color: '#000' }}>{driver.email || '—'}</td>
-                  <td style={{ padding: '12px' }}>
-                    <span className={driver.is_active ? 'badge badge-verified' : 'badge badge-unverified'}>
-                      {driver.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '12px' }}>
-                    <button
-                      onClick={() => openModal(driver)}
-                      className="button-secondary"
-                      style={{ width: 'auto', padding: '6px 12px', fontSize: '14px' }}
-                    >
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {drivers.map((driver) => {
+                const getRiskLevelColor = (level: string) => {
+                  switch (level) {
+                    case 'Low': return '#4CAF50';
+                    case 'Medium': return '#FF9800';
+                    case 'High': return '#f44336';
+                    default: return '#999';
+                  }
+                };
+
+                return (
+                  <tr key={driver.id} style={{ borderBottom: '1px solid #ddd' }}>
+                    <td style={{ padding: '12px', color: '#000' }}>{driver.driver_id}</td>
+                    <td style={{ padding: '12px', color: '#000' }}>{driver.full_name}</td>
+                    <td style={{ padding: '12px', color: '#000' }}>{driver.license_number}</td>
+                    <td style={{ padding: '12px', color: '#000' }}>{driver.phone_number}</td>
+                    <td style={{ padding: '12px', color: '#000' }}>{driver.email || '—'}</td>
+                    <td style={{ padding: '12px', textAlign: 'center', color: '#000', fontWeight: '600' }}>
+                      {driver.average_risk_score !== null && driver.average_risk_score !== undefined 
+                        ? driver.average_risk_score.toFixed(2) 
+                        : '—'}
+                    </td>
+                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                      <span style={{
+                        padding: '4px 12px',
+                        borderRadius: '12px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: '#fff',
+                        backgroundColor: getRiskLevelColor(driver.risk_level || 'N/A'),
+                      }}>
+                        {driver.risk_level || 'N/A'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px' }}>
+                      <span className={driver.is_active ? 'badge badge-verified' : 'badge badge-unverified'}>
+                        {driver.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px' }}>
+                      <button
+                        onClick={() => openModal(driver)}
+                        className="button-secondary"
+                        style={{ width: 'auto', padding: '6px 12px', fontSize: '14px' }}
+                      >
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

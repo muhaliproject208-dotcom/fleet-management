@@ -9,6 +9,7 @@ from ..models import (
     PreTripInspection,
     TripBehaviorMonitoring,
     DrivingBehaviorCheck,
+    InspectionStatus,
 )
 from ..serializers import (
     TripBehaviorMonitoringSerializer,
@@ -49,38 +50,70 @@ class BaseBehaviorViewSet(viewsets.ModelViewSet):
         
         return queryset
     
-    def perform_create(self, serializer):
-        """Create behavior for the specified inspection"""
-        # Get inspection ID from URL
+    def create(self, request, *args, **kwargs):
+        """Create or update behavior (upsert behavior based on behavior_item)"""
         inspection_id = self.kwargs.get('inspection_pk')
         
         if not inspection_id:
-            raise DjangoValidationError("Inspection ID is required")
+            return Response(
+                {'error': 'Inspection ID is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         try:
             inspection = PreTripInspection.objects.get(id=inspection_id)
         except PreTripInspection.DoesNotExist:
-            raise DjangoValidationError("Inspection not found")
-        
-        # Validate user has permission
-        user = self.request.user
-        if not (user.is_superuser_role or user.is_fleet_manager_role):
-            if user.is_transport_supervisor_role and inspection.supervisor != user:
-                raise DjangoValidationError("You can only create behaviors for your own inspections")
-        
-        # Validate inspection is editable
-        if not inspection.can_edit():
-            raise DjangoValidationError(
-                f"Cannot create behaviors for inspection with status: {inspection.status}"
+            return Response(
+                {'error': 'Inspection not found'},
+                status=status.HTTP_404_NOT_FOUND
             )
         
-        serializer.save(inspection=inspection)
+        # Validate user has permission
+        user = request.user
+        if not (user.is_superuser_role or user.is_fleet_manager_role):
+            if user.is_transport_supervisor_role and inspection.supervisor != user:
+                return Response(
+                    {'error': 'You can only create behaviors for your own inspections'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
+        # Validate inspection is in a state that allows post-trip behaviors
+        allowed_statuses = {
+            InspectionStatus.APPROVED,
+            InspectionStatus.POST_TRIP_IN_PROGRESS,
+        }
+        if not (inspection.can_edit() or inspection.status in allowed_statuses):
+            return Response(
+                {'error': f'Cannot create behaviors for inspection with status: {inspection.status}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if behavior already exists for this inspection and behavior_item - update if so
+        behavior_item = request.data.get('behavior_item')
+        model = self.serializer_class.Meta.model
+        
+        try:
+            existing = model.objects.get(inspection=inspection, behavior_item=behavior_item)
+            serializer = self.get_serializer(existing, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except model.DoesNotExist:
+            # Create new behavior
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save(inspection=inspection)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
     
     def perform_update(self, serializer):
         """Validate inspection is editable before updating"""
         instance = serializer.instance
         
-        if not instance.inspection.can_edit():
+        allowed_statuses = {
+            InspectionStatus.APPROVED,
+            InspectionStatus.POST_TRIP_IN_PROGRESS,
+        }
+        if not (instance.inspection.can_edit() or instance.inspection.status in allowed_statuses):
             raise DjangoValidationError(
                 f"Cannot edit behavior. Inspection status: {instance.inspection.status}"
             )
@@ -89,7 +122,11 @@ class BaseBehaviorViewSet(viewsets.ModelViewSet):
     
     def perform_destroy(self, instance):
         """Validate inspection is editable before deleting"""
-        if not instance.inspection.can_edit():
+        allowed_statuses = {
+            InspectionStatus.APPROVED,
+            InspectionStatus.POST_TRIP_IN_PROGRESS,
+        }
+        if not (instance.inspection.can_edit() or instance.inspection.status in allowed_statuses):
             raise DjangoValidationError(
                 f"Cannot delete behavior. Inspection status: {instance.inspection.status}"
             )
@@ -122,8 +159,12 @@ class BaseBehaviorViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_403_FORBIDDEN
                 )
         
-        # Validate inspection is editable
-        if not inspection.can_edit():
+        # Validate inspection is editable or in approved/post-trip state
+        allowed_statuses = {
+            InspectionStatus.APPROVED,
+            InspectionStatus.POST_TRIP_IN_PROGRESS,
+        }
+        if not (inspection.can_edit() or inspection.status in allowed_statuses):
             return Response(
                 {'error': f'Cannot create behaviors for inspection with status: {inspection.status}'},
                 status=status.HTTP_400_BAD_REQUEST

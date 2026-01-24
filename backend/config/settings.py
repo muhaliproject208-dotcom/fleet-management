@@ -98,6 +98,24 @@ DATABASES = {
         'PASSWORD': env_config('SUPABASE_DB_PASSWORD'),
         'HOST': env_config('SUPABASE_DB_HOST', default='localhost'),
         'PORT': env_config('SUPABASE_DB_PORT', default='5432'),
+        # Connection pooling - reuse database connections for better performance
+        'CONN_MAX_AGE': 600,  # Keep connections alive for 10 minutes
+        'OPTIONS': {
+            'connect_timeout': 10,
+            'options': '-c statement_timeout=30000',  # 30 second query timeout
+        },
+    }
+}
+
+# Cache configuration - for read-heavy queries
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'fleet-management-cache',
+        'TIMEOUT': 300,  # 5 minutes default timeout
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000
+        }
     }
 }
 

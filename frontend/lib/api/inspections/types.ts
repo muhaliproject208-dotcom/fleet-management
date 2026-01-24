@@ -6,6 +6,8 @@ export enum InspectionStatus {
   SUBMITTED = 'submitted',
   APPROVED = 'approved',
   REJECTED = 'rejected',
+  POST_TRIP_IN_PROGRESS = 'post_trip_in_progress',
+  POST_TRIP_COMPLETED = 'post_trip_completed',
 }
 
 export enum HealthCheckStatus {
@@ -31,6 +33,7 @@ export interface CompletionInfo {
   next_step: number | null;
   completion_percentage: number;
   total_steps: number;
+  is_complete?: boolean;
 }
 
 export interface PreTripInspection {
@@ -77,6 +80,9 @@ export interface PreTripInspection {
   // Completion tracking for drafts
   completion_info?: CompletionInfo | null;
   
+  // Completion tracking for post-trip
+  post_trip_completion_info?: CompletionInfo | null;
+  
   // Timestamps
   created_at: string;
   updated_at: string;
@@ -93,10 +99,69 @@ export interface VehicleCheck {
   updated_at: string;
 }
 
+// Trip Behavior Monitoring
+export interface TripBehavior {
+  id: string;
+  inspection: string;
+  behavior_item: string;
+  status: 'compliant' | 'violation' | 'none';
+  notes?: string;
+  violation_points: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Post-Trip Report
+export interface PostTripReport {
+  id: string;
+  inspection: string;
+  vehicle_fault_submitted: boolean;
+  fault_notes?: string;
+  final_inspection_signed: boolean;
+  compliance_with_policy: boolean;
+  attitude_cooperation: boolean;
+  incidents_recorded: boolean;
+  incident_notes?: string;
+  total_trip_duration: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Risk Score Summary
+export interface RiskScoreSummary {
+  id: string;
+  inspection: string;
+  total_points_this_trip: number;
+  risk_level: 'low' | 'medium' | 'high';
+  total_points_30_days: number;
+  risk_level_30_days: 'low' | 'medium' | 'high';
+  created_at: string;
+  updated_at: string;
+}
+
+// Evaluation Summary
+export interface EvaluationSummary {
+  id: string;
+  inspection: string;
+  pre_trip_inspection_score: number;
+  driving_conduct_score: number;
+  incident_management_score: number;
+  post_trip_reporting_score: number;
+  compliance_documentation_score: number;
+  overall_performance: 'excellent' | 'satisfactory' | 'needs_improvement' | 'non_compliant';
+  comments?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PreTripInspectionFull extends PreTripInspection {
   // OneToOne relationships
   health_fitness?: HealthFitnessCheck | null;
   documentation?: DocumentationCompliance | null;
+  supervisor_remarks?: SupervisorRemarks | null;
+  post_trip?: PostTripReport | null;
+  risk_score?: RiskScoreSummary | null;
+  evaluation?: EvaluationSummary | null;
   
   // Vehicle checks (ForeignKey many)
   exterior_checks?: VehicleCheck[];
@@ -105,10 +170,24 @@ export interface PreTripInspectionFull extends PreTripInspection {
   functional_checks?: VehicleCheck[];
   safety_equipment_checks?: VehicleCheck[];
   
+  // Trip behaviors (ForeignKey many)
+  trip_behaviors?: TripBehavior[];
+  
   // Computed fields
   completion_percentage?: number;
   total_violation_points?: number;
   has_critical_failures?: boolean;
+}
+
+// Supervisor Remarks
+export interface SupervisorRemarks {
+  id: string;
+  inspection: string;
+  supervisor_name: string;
+  remarks: string;
+  recommendation?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CreateInspectionData {

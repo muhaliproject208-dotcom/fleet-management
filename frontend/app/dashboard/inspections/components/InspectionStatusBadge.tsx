@@ -7,33 +7,41 @@ interface InspectionStatusBadgeProps {
 }
 
 export default function InspectionStatusBadge({ status, size = 'md' }: InspectionStatusBadgeProps) {
-  const getStatusColor = () => {
+  const getStatusStyles = (): { bg: string; text: string; border: string } => {
     switch (status) {
       case InspectionStatus.DRAFT:
-        return 'bg-gray-100 text-gray-800 border-gray-300';
+        return { bg: '#f5f5f5', text: '#666', border: '#ccc' };
       case InspectionStatus.SUBMITTED:
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+        return { bg: '#f5f5f5', text: '#333', border: '#999' };
       case InspectionStatus.APPROVED:
-        return 'bg-green-100 text-green-800 border-green-300';
+        return { bg: '#000', text: '#fff', border: '#000' };
       case InspectionStatus.REJECTED:
-        return 'bg-red-100 text-red-800 border-red-300';
+        return { bg: '#fff', text: '#000', border: '#000' };
+      case InspectionStatus.POST_TRIP_IN_PROGRESS:
+        return { bg: '#FF9800', text: '#fff', border: '#FF9800' };
+      case InspectionStatus.POST_TRIP_COMPLETED:
+        return { bg: '#4CAF50', text: '#fff', border: '#4CAF50' };
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-300';
+        return { bg: '#f5f5f5', text: '#666', border: '#ccc' };
     }
   };
 
   const getStatusIcon = () => {
     switch (status) {
       case InspectionStatus.DRAFT:
-        return '📝';
+        return 'edit_note';
       case InspectionStatus.SUBMITTED:
-        return '⏳';
+        return 'schedule';
       case InspectionStatus.APPROVED:
-        return '✅';
+        return 'check_circle';
       case InspectionStatus.REJECTED:
-        return '❌';
+        return 'cancel';
+      case InspectionStatus.POST_TRIP_IN_PROGRESS:
+        return 'hourglass_empty';
+      case InspectionStatus.POST_TRIP_COMPLETED:
+        return 'verified';
       default:
-        return '•';
+        return 'circle';
     }
   };
 
@@ -47,24 +55,40 @@ export default function InspectionStatusBadge({ status, size = 'md' }: Inspectio
         return 'Approved';
       case InspectionStatus.REJECTED:
         return 'Rejected';
+      case InspectionStatus.POST_TRIP_IN_PROGRESS:
+        return 'Post-Trip In Progress';
+      case InspectionStatus.POST_TRIP_COMPLETED:
+        return 'Completed';
       default:
         return status;
     }
   };
 
-  const sizeClasses = {
-    sm: 'px-2 py-1 text-xs',
-    md: 'px-3 py-1 text-sm',
-    lg: 'px-4 py-2 text-base',
+  const sizeStyles = {
+    sm: { padding: '4px 8px', fontSize: '12px', iconSize: '14px' },
+    md: { padding: '6px 12px', fontSize: '14px', iconSize: '16px' },
+    lg: { padding: '8px 16px', fontSize: '16px', iconSize: '18px' },
   };
+
+  const styles = getStatusStyles();
+  const sizeStyle = sizeStyles[size];
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border font-medium ${getStatusColor()} ${
-        sizeClasses[size]
-      }`}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+        borderRadius: '20px',
+        border: `1px solid ${styles.border}`,
+        backgroundColor: styles.bg,
+        color: styles.text,
+        fontWeight: 500,
+        padding: sizeStyle.padding,
+        fontSize: sizeStyle.fontSize,
+      }}
     >
-      <span>{getStatusIcon()}</span>
+      <span className="material-icons" style={{ fontSize: sizeStyle.iconSize }}>{getStatusIcon()}</span>
       <span>{getStatusLabel()}</span>
     </span>
   );

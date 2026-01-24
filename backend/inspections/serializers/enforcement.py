@@ -5,6 +5,10 @@ from ..models import CorrectiveMeasure, EnforcementAction
 class CorrectiveMeasureSerializer(serializers.ModelSerializer):
     """Serializer for Corrective Measure"""
     
+    # Allow empty strings to be converted to None
+    due_date = serializers.DateField(required=False, allow_null=True)
+    completed_date = serializers.DateField(required=False, allow_null=True)
+    
     class Meta:
         model = CorrectiveMeasure
         fields = [
@@ -20,6 +24,16 @@ class CorrectiveMeasureSerializer(serializers.ModelSerializer):
             'updated_at'
         ]
         read_only_fields = ['id', 'inspection', 'created_at', 'updated_at']
+    
+    def to_internal_value(self, data):
+        """Convert empty strings to None for date fields"""
+        if 'due_date' in data and data['due_date'] == '':
+            data = data.copy()
+            data['due_date'] = None
+        if 'completed_date' in data and data['completed_date'] == '':
+            data = data.copy()
+            data['completed_date'] = None
+        return super().to_internal_value(data)
     
     def validate(self, attrs):
         """Cross-field validation"""
@@ -49,6 +63,10 @@ class CorrectiveMeasureSerializer(serializers.ModelSerializer):
 class EnforcementActionSerializer(serializers.ModelSerializer):
     """Serializer for Enforcement Action"""
     
+    # Allow empty strings to be converted to None
+    start_date = serializers.DateField(required=False, allow_null=True)
+    end_date = serializers.DateField(required=False, allow_null=True)
+    
     class Meta:
         model = EnforcementAction
         fields = [
@@ -63,6 +81,16 @@ class EnforcementActionSerializer(serializers.ModelSerializer):
             'updated_at'
         ]
         read_only_fields = ['id', 'inspection', 'created_at', 'updated_at']
+    
+    def to_internal_value(self, data):
+        """Convert empty strings to None for date fields"""
+        if 'start_date' in data and data['start_date'] == '':
+            data = data.copy()
+            data['start_date'] = None
+        if 'end_date' in data and data['end_date'] == '':
+            data = data.copy()
+            data['end_date'] = None
+        return super().to_internal_value(data)
     
     def validate(self, attrs):
         """Cross-field validation"""

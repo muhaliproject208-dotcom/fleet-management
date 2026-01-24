@@ -226,7 +226,7 @@ export const rejectInspection = async (
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ rejection_reason: reason }),
+      body: JSON.stringify({ reason }),
     });
 
     if (!response.ok) {

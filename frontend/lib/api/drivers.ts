@@ -8,6 +8,8 @@ export interface Driver {
   phone_number: string;
   email?: string;
   is_active: boolean;
+  average_risk_score?: number | null;
+  risk_level?: string;
   created_at?: string;
   updated_at?: string;
 }

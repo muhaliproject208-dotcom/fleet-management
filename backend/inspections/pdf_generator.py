@@ -154,7 +154,7 @@ class InspectionPDFGenerator:
         
         data = [
             ['Driver:', inspection.driver.full_name, 'License:', inspection.driver.license_number],
-            ['Vehicle:', f"{inspection.vehicle.registration_number} ({inspection.vehicle.make} {inspection.vehicle.model})", 'Type:', inspection.vehicle.vehicle_type],
+            ['Vehicle:', f"{inspection.vehicle.registration_number} - {inspection.vehicle.vehicle_type}", 'Vehicle ID:', inspection.vehicle.vehicle_id],
               ['Route:', inspection.route or 'N/A', 'Inspection Date:', inspection.inspection_date.strftime('%Y-%m-%d')],
               ['Planned Departure:', getattr(inspection, 'planned_departure_time', None).strftime('%H:%M') if getattr(inspection, 'planned_departure_time', None) else 'N/A',
                'Actual Departure:', getattr(inspection, 'actual_departure_time', None).strftime('%H:%M') if getattr(inspection, 'actual_departure_time', None) else 'N/A'],
@@ -179,14 +179,21 @@ class InspectionPDFGenerator:
         self.story.append(section)
         
         data = [
-            ['Physical Fitness:', self._get_status_display(health_fitness.physical_fitness)],
-            ['Mental Alertness:', self._get_status_display(health_fitness.mental_alertness)],
-            ['Substance Check:', self._get_status_display(health_fitness.substance_check)],
-            ['Adequate Rest:', self._get_status_display(health_fitness.adequate_rest)],
+            ['Alcohol Test:', self._get_status_display(health_fitness.alcohol_test_status)],
+            ['Temperature Check:', self._get_status_display(health_fitness.temperature_check_status)],
+            ['Temperature Value:', f"{health_fitness.temperature_value}°C" if health_fitness.temperature_value else 'N/A'],
+            ['Fit for Duty:', 'Yes' if health_fitness.fit_for_duty else 'No'],
+            ['On Medication:', 'Yes' if health_fitness.medication_status else 'No'],
+            ['No Health Impairment:', 'Yes' if health_fitness.no_health_impairment else 'No'],
+            ['Fatigue Checklist:', 'Completed' if health_fitness.fatigue_checklist_completed else 'Not Completed'],
         ]
         
-        if health_fitness.remarks:
-            data.append(['Remarks:', health_fitness.remarks])
+        if health_fitness.alcohol_test_remarks:
+            data.append(['Alcohol Test Remarks:', health_fitness.alcohol_test_remarks])
+        if health_fitness.medication_remarks:
+            data.append(['Medication Remarks:', health_fitness.medication_remarks])
+        if health_fitness.fatigue_remarks:
+            data.append(['Fatigue Remarks:', health_fitness.fatigue_remarks])
         
         table = Table(data, colWidths=[2*inch, 4.5*inch])
         table.setStyle(self._get_check_table_style())
@@ -204,20 +211,25 @@ class InspectionPDFGenerator:
         self.story.append(section)
         
         data = [
-            ['Driver License:', self._get_status_display(documentation.driver_license_status),
-             'Expiry:', documentation.driver_license_expiry.strftime('%Y-%m-%d')],
-            ['Vehicle License:', self._get_status_display(documentation.vehicle_license_status),
-             'Expiry:', documentation.vehicle_license_expiry.strftime('%Y-%m-%d')],
-            ['Insurance:', self._get_status_display(documentation.insurance_certificate_status),
-             'Expiry:', documentation.insurance_expiry.strftime('%Y-%m-%d')],
-            ['Roadworthiness:', self._get_status_display(documentation.roadworthiness_status),
-             'Expiry:', documentation.roadworthiness_expiry.strftime('%Y-%m-%d')],
+            ['Certificate of Fitness:', self._get_status_display(documentation.certificate_of_fitness)],
+            ['Road Tax Valid:', 'Yes' if documentation.road_tax_valid else 'No'],
+            ['Insurance Valid:', 'Yes' if documentation.insurance_valid else 'No'],
+            ['Trip Authorization Signed:', 'Yes' if documentation.trip_authorization_signed else 'No'],
+            ['Logbook Present:', 'Yes' if documentation.logbook_present else 'No'],
+            ['Driver Handbook Present:', 'Yes' if documentation.driver_handbook_present else 'No'],
+            ['Permits Valid:', 'Yes' if documentation.permits_valid else 'No'],
+            ['PPE Available:', 'Yes' if documentation.ppe_available else 'No'],
+            ['Route Familiarity:', 'Yes' if documentation.route_familiarity else 'No'],
+            ['Emergency Procedures Known:', 'Yes' if documentation.emergency_procedures_known else 'No'],
+            ['GPS Activated:', 'Yes' if documentation.gps_activated else 'No'],
+            ['Safety Briefing Provided:', 'Yes' if documentation.safety_briefing_provided else 'No'],
+            ['RTSA Clearance:', 'Yes' if documentation.rtsa_clearance else 'No'],
         ]
         
-        if documentation.remarks:
-            data.append(['Remarks:', documentation.remarks, '', ''])
+        if documentation.emergency_contact:
+            data.append(['Emergency Contact:', documentation.emergency_contact])
         
-        table = Table(data, colWidths=[1.5*inch, 1.8*inch, 0.8*inch, 1.4*inch])
+        table = Table(data, colWidths=[2.5*inch, 4*inch])
         table.setStyle(self._get_check_table_style())
         self.story.append(table)
         self.story.append(Spacer(1, 0.2*inch))
@@ -270,16 +282,15 @@ class InspectionPDFGenerator:
         section = Paragraph("5. ENGINE & FLUID CHECKS", self.styles['SectionHeader'])
         self.story.append(section)
         
-        data = [['Component', 'Status', 'Level', 'Remarks']]
+        data = [['Component', 'Status', 'Remarks']]
         for check in checks:
             data.append([
                 check.check_item,
                 self._get_status_display(check.status),
-                check.fluid_level or 'N/A',
                 check.remarks or 'N/A'
             ])
         
-        table = Table(data, colWidths=[1.8*inch, 1.2*inch, 1*inch, 2.5*inch])
+        table = Table(data, colWidths=[2*inch, 1.5*inch, 3*inch])
         table.setStyle(self._get_vehicle_check_table_style(len(data)))
         self.story.append(table)
         self.story.append(Spacer(1, 0.2*inch))
@@ -337,16 +348,15 @@ class InspectionPDFGenerator:
         section = Paragraph("8. SAFETY EQUIPMENT CHECKS", self.styles['SectionHeader'])
         self.story.append(section)
         
-        data = [['Equipment', 'Status', 'Quantity', 'Remarks']]
+        data = [['Equipment', 'Status', 'Remarks']]
         for check in checks:
             data.append([
                 check.check_item,
                 self._get_status_display(check.status),
-                str(check.quantity) if check.quantity else 'N/A',
                 check.remarks or 'N/A'
             ])
         
-        table = Table(data, colWidths=[1.8*inch, 1.2*inch, 0.8*inch, 2.7*inch])
+        table = Table(data, colWidths=[2*inch, 1.5*inch, 3*inch])
         table.setStyle(self._get_vehicle_check_table_style(len(data)))
         self.story.append(table)
         self.story.append(Spacer(1, 0.2*inch))
@@ -360,13 +370,13 @@ class InspectionPDFGenerator:
         section = Paragraph("9. TRIP BEHAVIOR MONITORING", self.styles['SectionHeader'])
         self.story.append(section)
         
-        data = [['Behavior Item', 'Status', 'Violation Points', 'Remarks']]
+        data = [['Behavior Item', 'Status', 'Violation Points', 'Notes']]
         for behavior in behaviors:
             data.append([
                 behavior.behavior_item,
                 self._get_status_display(behavior.status),
                 str(behavior.violation_points),
-                behavior.remarks or 'N/A'
+                behavior.notes or 'N/A'
             ])
         
         # Add total
@@ -396,7 +406,7 @@ class InspectionPDFGenerator:
         for behavior in behaviors:
             data.append([
                 behavior.behavior_item,
-                'Yes' if behavior.is_compliant else 'No',
+                'Yes' if behavior.status else 'No',
                 behavior.remarks or 'N/A'
             ])
         
@@ -416,18 +426,19 @@ class InspectionPDFGenerator:
         self.story.append(section)
         
         data = [
-            ['Actual Return Time:', post_trip.actual_return_time.strftime('%Y-%m-%d %H:%M') if post_trip.actual_return_time else 'N/A'],
-            ['Final Odometer:', f"{post_trip.final_odometer_reading} km" if post_trip.final_odometer_reading else 'N/A'],
-            ['Fuel Level:', post_trip.fuel_level_at_return or 'N/A'],
-            ['Faults Detected:', 'Yes' if post_trip.faults_detected else 'No'],
-            ['Incidents Reported:', 'Yes' if post_trip.incidents_reported else 'No'],
+            ['Vehicle Fault Submitted:', 'Yes' if post_trip.vehicle_fault_submitted else 'No'],
+            ['Final Inspection Signed:', 'Yes' if post_trip.final_inspection_signed else 'No'],
+            ['Compliance with Policy:', 'Yes' if post_trip.compliance_with_policy else 'No'],
+            ['Attitude & Cooperation:', 'Yes' if post_trip.attitude_cooperation else 'No'],
+            ['Incidents Recorded:', 'Yes' if post_trip.incidents_recorded else 'No'],
+            ['Total Trip Duration:', post_trip.total_trip_duration or 'N/A'],
         ]
         
-        if post_trip.faults_detected and post_trip.fault_description:
-            data.append(['Fault Description:', post_trip.fault_description])
+        if post_trip.vehicle_fault_submitted and post_trip.fault_notes:
+            data.append(['Fault Notes:', post_trip.fault_notes])
         
-        if post_trip.incidents_reported and post_trip.incident_description:
-            data.append(['Incident Description:', post_trip.incident_description])
+        if post_trip.incidents_recorded and post_trip.incident_notes:
+            data.append(['Incident Notes:', post_trip.incident_notes])
         
         table = Table(data, colWidths=[2*inch, 4.5*inch])
         table.setStyle(self._get_info_table_style())
@@ -446,16 +457,14 @@ class InspectionPDFGenerator:
         
         # Risk score box with color coding
         risk_color = self._get_risk_color(risk_score.risk_level)
+        risk_color_30 = self._get_risk_color(risk_score.risk_level_30_days)
         
         data = [
-            ['Current Trip Points:', str(risk_score.current_trip_points)],
-            ['30-Day Total Points:', str(risk_score.total_30_day_points)],
-            ['Risk Level:', risk_score.risk_level.upper()],
-            ['Requires Review:', 'Yes' if risk_score.requires_supervisor_review else 'No'],
+            ['Current Trip Points:', str(risk_score.total_points_this_trip)],
+            ['Risk Level (This Trip):', risk_score.risk_level.upper()],
+            ['30-Day Total Points:', str(risk_score.total_points_30_days)],
+            ['Risk Level (30 Days):', risk_score.risk_level_30_days.upper()],
         ]
-        
-        if risk_score.notes:
-            data.append(['Notes:', risk_score.notes])
         
         table = Table(data, colWidths=[2*inch, 4.5*inch])
         table.setStyle(TableStyle([
@@ -467,8 +476,10 @@ class InspectionPDFGenerator:
             ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 0), (-1, -1), 10),
             ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-            ('BACKGROUND', (1, 2), (1, 2), risk_color),
-            ('FONTNAME', (1, 2), (1, 2), 'Helvetica-Bold'),
+            ('BACKGROUND', (1, 1), (1, 1), risk_color),
+            ('FONTNAME', (1, 1), (1, 1), 'Helvetica-Bold'),
+            ('BACKGROUND', (1, 3), (1, 3), risk_color_30),
+            ('FONTNAME', (1, 3), (1, 3), 'Helvetica-Bold'),
         ]))
         
         self.story.append(table)
@@ -483,11 +494,12 @@ class InspectionPDFGenerator:
         section = Paragraph("13. CORRECTIVE MEASURES", self.styles['SectionHeader'])
         self.story.append(section)
         
-        data = [['Measure Type', 'Description', 'Due Date', 'Status']]
+        data = [['Measure Type', 'Notes', 'Due Date', 'Status']]
         for measure in measures:
+            notes_text = measure.notes[:50] + '...' if measure.notes and len(measure.notes) > 50 else (measure.notes or 'N/A')
             data.append([
                 measure.get_measure_type_display(),
-                measure.description[:50] + '...' if len(measure.description) > 50 else measure.description,
+                notes_text,
                 measure.due_date.strftime('%Y-%m-%d') if measure.due_date else 'N/A',
                 'Completed' if measure.completed else 'Pending'
             ])
@@ -506,11 +518,12 @@ class InspectionPDFGenerator:
         section = Paragraph("14. ENFORCEMENT ACTIONS", self.styles['SectionHeader'])
         self.story.append(section)
         
-        data = [['Action Type', 'Description', 'Start Date', 'End Date']]
+        data = [['Action Type', 'Notes', 'Start Date', 'End Date']]
         for action in actions:
+            notes_text = action.notes[:50] + '...' if action.notes and len(action.notes) > 50 else (action.notes or 'N/A')
             data.append([
                 action.get_action_type_display(),
-                action.description[:50] + '...' if len(action.description) > 50 else action.description,
+                notes_text,
                 action.start_date.strftime('%Y-%m-%d') if action.start_date else 'N/A',
                 action.end_date.strftime('%Y-%m-%d') if action.end_date else 'N/A'
             ])

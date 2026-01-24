@@ -11,6 +11,8 @@ class InspectionStatus(models.TextChoices):
     SUBMITTED = 'submitted', 'Submitted'
     APPROVED = 'approved', 'Approved'
     REJECTED = 'rejected', 'Rejected'
+    POST_TRIP_IN_PROGRESS = 'post_trip_in_progress', 'Post-Trip In Progress'
+    POST_TRIP_COMPLETED = 'post_trip_completed', 'Post-Trip Completed'
 
 
 class PreTripInspection(models.Model):
@@ -68,7 +70,7 @@ class PreTripInspection(models.Model):
         help_text="Number of approved rest stops"
     )
     status = models.CharField(
-        max_length=20,
+        max_length=25,
         choices=InspectionStatus.choices,
         default=InspectionStatus.DRAFT,
         db_index=True,
@@ -97,9 +99,9 @@ class PreTripInspection(models.Model):
     class Meta:
         ordering = ['-inspection_date', '-created_at']
         indexes = [
-            models.Index(fields=['inspection_id']),
-            models.Index(fields=['status']),
-            models.Index(fields=['inspection_date']),
+            models.Index(fields=['inspection_id'], name='inspections_inspection_id_idx'),
+            models.Index(fields=['status'], name='inspections_status_30a247_idx'),
+            models.Index(fields=['inspection_date'], name='inspections_date_idx'),
         ]
         verbose_name = 'Pre-Trip Inspection'
         verbose_name_plural = 'Pre-Trip Inspections'
@@ -240,6 +242,87 @@ class PreTripInspection(models.Model):
             'total_steps': total_steps
         }
     
+    def get_post_trip_completion_status(self):
+        """
+        Calculate completion status for post-trip inspections.
+        Returns: {
+            'completed_steps': [1, 2, 3, ...],
+            'next_step': 4,
+            'completion_percentage': 33.33,
+            'total_steps': 9
+        }
+        """
+        completed_steps = []
+        
+        # Step 1: Trip Behavior Monitoring
+        try:
+            if self.trip_behaviors.exists():
+                completed_steps.append(1)
+        except Exception:
+            pass
+        
+        # Step 2: Driving Behavior Check
+        try:
+            if self.driving_behaviors.exists():
+                completed_steps.append(2)
+        except Exception:
+            pass
+        
+        # Step 3: Post-Trip Report
+        try:
+            self.post_trip
+            completed_steps.append(3)
+        except Exception:
+            pass
+        
+        # Step 4: Risk Score Summary
+        try:
+            self.risk_score
+            completed_steps.append(4)
+        except Exception:
+            pass
+        
+        # Step 5: Corrective Measures (optional - always count as complete if we pass step 4)
+        if 4 in completed_steps:
+            completed_steps.append(5)
+        
+        # Step 6: Enforcement Actions (optional - always count as complete if we pass step 5)
+        if 5 in completed_steps:
+            completed_steps.append(6)
+        
+        # Step 7: Supervisor Remarks
+        try:
+            if hasattr(self, 'supervisor_remarks') and self.supervisor_remarks:
+                completed_steps.append(7)
+        except Exception:
+            pass
+        
+        # Step 8: Evaluation Summary
+        try:
+            self.evaluation
+            completed_steps.append(8)
+        except Exception:
+            pass
+        
+        # Step 9: Driver Sign-Off
+        try:
+            if self.sign_offs.filter(role='driver').exists():
+                completed_steps.append(9)
+        except Exception:
+            pass
+        
+        total_steps = 9
+        next_step = min([s for s in range(1, total_steps + 1) if s not in completed_steps], default=total_steps + 1)
+        completion_percentage = round((len(completed_steps) / total_steps) * 100, 2)
+        
+        return {
+            'completed_steps': sorted(completed_steps),
+            'next_step': next_step if next_step <= total_steps else None,
+            'completion_percentage': completion_percentage,
+            'total_steps': total_steps,
+            'is_complete': len(completed_steps) == total_steps
+        }
+    
     def submit_for_approval(self):
         """
         Change status to 'submitted'.
@@ -255,39 +338,6 @@ class PreTripInspection(models.Model):
         if not all([self.driver, self.vehicle, self.supervisor, self.route, self.approved_driving_hours]):
             raise ValidationError(
                 "Cannot submit incomplete inspection. All required fields must be filled."
-            )
-        
-        # Check for critical failures in vehicle checks
-        critical_failures = []
-        
-        # Check exterior checks (tires, lights are critical)
-        for check in self.exterior_checks.all():
-            if check.has_critical_failure():
-                critical_failures.append(f"Exterior: {check.check_item}")
-        
-        # Check engine/fluid checks (engine oil, brake fluid are critical)
-        for check in self.engine_fluid_checks.all():
-            if check.has_critical_failure():
-                critical_failures.append(f"Engine/Fluid: {check.check_item}")
-        
-        # Check interior checks (seatbelts are critical)
-        for check in self.interior_cabin_checks.all():
-            if check.has_critical_failure():
-                critical_failures.append(f"Interior: {check.check_item}")
-        
-        # Check functional checks (brakes, steering are critical)
-        for check in self.functional_checks.all():
-            if check.has_critical_failure():
-                critical_failures.append(f"Functional: {check.check_item}")
-        
-        # Check safety equipment (fire extinguisher, first aid kit are critical)
-        for check in self.safety_equipment_checks.all():
-            if check.has_critical_failure():
-                critical_failures.append(f"Safety Equipment: {check.check_item}")
-        
-        if critical_failures:
-            raise ValidationError(
-                f"Cannot submit inspection with critical failures: {', '.join(critical_failures)}"
             )
         
         self.status = InspectionStatus.SUBMITTED
@@ -342,3 +392,20 @@ class PreTripInspection(models.Model):
         self.approval_status_updated_at = timezone.now()
         self.rejection_reason = reason
         self.save()
+    
+    def check_and_update_post_trip_status(self):
+        """
+        Check if post-trip inspection is complete and update status accordingly.
+        Call this after saving any post-trip related data.
+        """
+        if self.status != InspectionStatus.POST_TRIP_IN_PROGRESS:
+            return False
+        
+        completion_info = self.get_post_trip_completion_status()
+        
+        if completion_info.get('is_complete', False):
+            self.status = InspectionStatus.POST_TRIP_COMPLETED
+            self.save(update_fields=['status'])
+            return True
+        
+        return False

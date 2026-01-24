@@ -95,9 +95,9 @@ export default function InspectionsPage() {
     <div className="dashboard-container">
       <div className="dashboard-header">
         <div>
-          <h1>Pre-Trip Inspections</h1>
+          <h1>Inspections</h1>
           <p style={{ color: '#666', marginTop: '5px' }}>
-            Manage and track vehicle pre-trip inspections
+            Manage and track vehicle inspections
           </p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
@@ -212,6 +212,8 @@ export default function InspectionsPage() {
             <option value={InspectionStatus.DRAFT}>Draft</option>
             <option value={InspectionStatus.SUBMITTED}>Submitted</option>
             <option value={InspectionStatus.APPROVED}>Approved</option>
+            <option value={InspectionStatus.POST_TRIP_IN_PROGRESS}>Post-Trip In Progress</option>
+            <option value={InspectionStatus.POST_TRIP_COMPLETED}>Completed</option>
             <option value={InspectionStatus.REJECTED}>Rejected</option>
           </select>
         </div>
@@ -344,12 +346,82 @@ export default function InspectionsPage() {
                               padding: '6px 12px', 
                               fontSize: '14px',
                               width: 'auto',
+                              backgroundColor: '#666',
+                              borderColor: '#666',
+                            }}
+                          >
+                            Resume Pre-Trip ({inspection.completion_info?.next_step || 2}/9)
+                          </button>
+                        ) : inspection.status === InspectionStatus.APPROVED && inspection.post_trip_completion_info && inspection.post_trip_completion_info.completed_steps.length > 0 ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Go to step after highest completed
+                              const completedSteps = inspection.post_trip_completion_info?.completed_steps || [];
+                              const highestCompleted = completedSteps.length > 0 ? Math.max(...completedSteps) : 0;
+                              const nextStep = Math.min(highestCompleted + 1, 9);
+                              router.push(`/dashboard/inspections/${inspection.id}/post-trip?step=${nextStep}`);
+                            }}
+                            className="button-primary"
+                            style={{ 
+                              padding: '6px 12px', 
+                              fontSize: '14px',
+                              width: 'auto',
                               backgroundColor: '#FF9800',
                               borderColor: '#FF9800',
                             }}
                           >
-                            Resume ({inspection.completion_info?.next_step || 2}/9)
+                            Resume Post-Trip ({inspection.post_trip_completion_info?.completed_steps.length || 0}/9)
                           </button>
+                        ) : inspection.status === InspectionStatus.APPROVED ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/dashboard/inspections/${inspection.id}/post-trip`);
+                            }}
+                            className="button-primary"
+                            style={{ 
+                              padding: '6px 12px', 
+                              fontSize: '14px',
+                              width: 'auto',
+                              backgroundColor: '#2196F3',
+                              borderColor: '#2196F3',
+                            }}
+                          >
+                            Start Post-Trip
+                          </button>
+                        ) : inspection.status === InspectionStatus.POST_TRIP_IN_PROGRESS ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Go to step after highest completed
+                              const completedSteps = inspection.post_trip_completion_info?.completed_steps || [];
+                              const highestCompleted = completedSteps.length > 0 ? Math.max(...completedSteps) : 0;
+                              const nextStep = Math.min(highestCompleted + 1, 9);
+                              router.push(`/dashboard/inspections/${inspection.id}/post-trip?step=${nextStep}`);
+                            }}
+                            className="button-primary"
+                            style={{ 
+                              padding: '6px 12px', 
+                              fontSize: '14px',
+                              width: 'auto',
+                              backgroundColor: '#FF9800',
+                              borderColor: '#FF9800',
+                            }}
+                          >
+                            Resume Post-Trip ({inspection.post_trip_completion_info?.completed_steps.length || 0}/9)
+                          </button>
+                        ) : inspection.status === InspectionStatus.POST_TRIP_COMPLETED ? (
+                          <span
+                            style={{ 
+                              padding: '6px 12px', 
+                              fontSize: '14px',
+                              color: '#4CAF50',
+                              fontWeight: '600',
+                            }}
+                          >
+                            Completed
+                          </span>
                         ) : (
                           <button
                             onClick={(e) => {
@@ -361,28 +433,11 @@ export default function InspectionsPage() {
                               padding: '6px 12px', 
                               fontSize: '14px',
                               width: 'auto',
+                              backgroundColor: '#000',
+                              borderColor: '#000',
                             }}
                           >
-                            View
-                          </button>
-                        )}
-                        {inspection.status === 'approved' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              router.push(`/dashboard/inspections/${inspection.id}/post-trip`);
-                            }}
-                            className="button-secondary"
-                            style={{ 
-                              padding: '6px 12px', 
-                              fontSize: '14px',
-                              width: 'auto',
-                              backgroundColor: '#4CAF50',
-                              color: '#fff',
-                              border: 'none',
-                            }}
-                          >
-                            Post-Trip
+                            View Report
                           </button>
                         )}
                       </div>

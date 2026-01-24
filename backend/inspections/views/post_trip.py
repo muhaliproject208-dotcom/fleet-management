@@ -38,25 +38,46 @@ class PostTripReportViewSet(viewsets.ModelViewSet):
         
         return queryset
     
-    def perform_create(self, serializer):
-        """Create post-trip report for the specified inspection"""
+    def create(self, request, *args, **kwargs):
+        """Create or update post-trip report (upsert behavior)"""
         inspection_id = self.kwargs.get('inspection_pk')
         
         if not inspection_id:
-            raise DjangoValidationError("Inspection ID is required")
+            return Response(
+                {'error': 'Inspection ID is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         try:
             inspection = PreTripInspection.objects.get(id=inspection_id)
         except PreTripInspection.DoesNotExist:
-            raise DjangoValidationError("Inspection not found")
+            return Response(
+                {'error': 'Inspection not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
         
         # Validate user has permission
-        user = self.request.user
+        user = request.user
         if not (user.is_superuser_role or user.is_fleet_manager_role):
             if user.is_transport_supervisor_role and inspection.supervisor != user:
-                raise DjangoValidationError("You can only create post-trip reports for your own inspections")
+                return Response(
+                    {'error': 'You can only create post-trip reports for your own inspections'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
         
-        serializer.save(inspection=inspection)
+        # Check if report already exists - update instead of create
+        try:
+            existing_report = PostTripReport.objects.get(inspection=inspection)
+            serializer = self.get_serializer(existing_report, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except PostTripReport.DoesNotExist:
+            # Create new report
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save(inspection=inspection)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
     
     def perform_update(self, serializer):
         """Update post-trip report"""
@@ -94,25 +115,46 @@ class RiskScoreSummaryViewSet(viewsets.ModelViewSet):
         
         return queryset
     
-    def perform_create(self, serializer):
-        """Create risk score for the specified inspection"""
+    def create(self, request, *args, **kwargs):
+        """Create or update risk score (upsert behavior) - auto-calculates from trip behaviors"""
         inspection_id = self.kwargs.get('inspection_pk')
         
         if not inspection_id:
-            raise DjangoValidationError("Inspection ID is required")
+            return Response(
+                {'error': 'Inspection ID is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         try:
             inspection = PreTripInspection.objects.get(id=inspection_id)
         except PreTripInspection.DoesNotExist:
-            raise DjangoValidationError("Inspection not found")
+            return Response(
+                {'error': 'Inspection not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
         
         # Validate user has permission
-        user = self.request.user
+        user = request.user
         if not (user.is_superuser_role or user.is_fleet_manager_role):
             if user.is_transport_supervisor_role and inspection.supervisor != user:
-                raise DjangoValidationError("You can only create risk scores for your own inspections")
+                return Response(
+                    {'error': 'You can only create risk scores for your own inspections'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
         
-        serializer.save(inspection=inspection)
+        # Check if risk score already exists - update instead of create
+        try:
+            existing_score = RiskScoreSummary.objects.get(inspection=inspection)
+            # Trigger recalculation by saving
+            existing_score.save()
+            serializer = self.get_serializer(existing_score)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except RiskScoreSummary.DoesNotExist:
+            # Create new risk score - it will auto-calculate on save
+            risk_score = RiskScoreSummary(inspection=inspection)
+            risk_score.save()
+            serializer = self.get_serializer(risk_score)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
     
     def perform_update(self, serializer):
         """Update risk score (will auto-recalculate)"""

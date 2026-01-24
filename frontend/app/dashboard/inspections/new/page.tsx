@@ -11,6 +11,53 @@ import type { VehicleCheck } from '@/lib/api/inspections/types';
 import ProgressTracker from '../components/ProgressTracker';
 import { RadioOption, CheckItem } from '../components/FormComponents';
 
+// Mapping from display labels to backend-valid enum keys
+const EXTERIOR_CHECK_MAP: Record<string, string> = {
+  'Tires (inflation, tread depth, damage)': 'tires',
+  'Lights (headlights, taillights, brake lights, signals, hazard)': 'lights',
+  'Mirrors (clean, adjusted, damage-free)': 'mirrors',
+  'Windshield (cracks, chips, wipers, washer fluid)': 'windshield',
+  'Body Condition (visible damage)': 'body_condition',
+  'Loose Parts': 'loose_parts',
+  'Leaks': 'leaks',
+};
+
+const ENGINE_CHECK_MAP: Record<string, string> = {
+  'Engine Oil (level, quality)': 'engine_oil',
+  'Coolant (level, leaks)': 'coolant',
+  'Brake Fluid (level)': 'brake_fluid',
+  'Transmission Fluid (level, condition)': 'transmission_fluid',
+  'Power Steering Fluid (level)': 'power_steering_fluid',
+  'Battery (terminals, secure)': 'battery',
+};
+
+const INTERIOR_CHECK_MAP: Record<string, string> = {
+  'Dashboard Indicators (warning lights functioning)': 'dashboard_indicators',
+  'Seatbelts (operational, no wear/damage)': 'seatbelts',
+  'Horn (working)': 'horn',
+  'Fire Extinguisher (present, condition)': 'fire_extinguisher',
+  'First Aid Kit (present, condition)': 'first_aid_kit',
+  'Safety Triangles (present, condition)': 'safety_triangles',
+};
+
+const FUNCTIONAL_CHECK_MAP: Record<string, string> = {
+  'Brakes (responsiveness, effectiveness)': 'brakes',
+  'Steering (smooth operation)': 'steering',
+  'Suspension (unusual noises, handling)': 'suspension',
+  'Heating & Air Conditioning (both systems operational)': 'hvac',
+};
+
+const SAFETY_CHECK_MAP: Record<string, string> = {
+  'Fire Extinguisher (charged, tagged)': 'fire_extinguisher',
+  'First Aid Kit (stock verified)': 'first_aid_kit',
+  'Reflective Triangles (2 present)': 'reflective_triangles',
+  'Wheel Chocks': 'wheel_chocks',
+  'Spare Tyre and Jack': 'spare_tyre',
+  'Torch/Flashlight': 'torch',
+  'Emergency Contact List': 'emergency_contacts',
+  'GPS Tracker Operational': 'gps_tracker',
+};
+
 interface InspectionFormData {
   driver: string;
   vehicle: string;
@@ -87,9 +134,11 @@ export default function NewInspectionWizard() {
   const [sectionIds, setSectionIds] = useState<{
     healthId: string | null;
     documentationId: string | null;
+    supervisorRemarksId: string | null;
   }>({
     healthId: null,
     documentationId: null,
+    supervisorRemarksId: null,
   });
   
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -318,6 +367,7 @@ export default function NewInspectionWizard() {
           setSectionIds({
             healthId: inspection.health_fitness?.id?.toString() || null,
             documentationId: inspection.documentation?.id?.toString() || null,
+            supervisorRemarksId: inspection.supervisor_remarks?.id?.toString() || null,
           });
           
           // Set the step from URL param if provided (after data is loaded)
@@ -540,6 +590,7 @@ export default function NewInspectionWizard() {
         setSectionIds({
           healthId: inspection.health_fitness?.id?.toString() || null,
           documentationId: inspection.documentation?.id?.toString() || null,
+          supervisorRemarksId: inspection.supervisor_remarks?.id?.toString() || null,
         });
       }
       setLoading(false);
@@ -701,12 +752,17 @@ export default function NewInspectionWizard() {
         // Create new checks
         for (const check of formData.exterior_checks) {
           if (check.status) {
+            const checkKey = EXTERIOR_CHECK_MAP[check.item];
+            if (!checkKey) {
+              console.error('Unknown exterior check item:', check.item);
+              continue;
+            }
             await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/exterior-checks/`, {
               method: 'POST',
               headers,
               body: JSON.stringify({
                 inspection: inspectionId,
-                check_item: check.item,
+                check_item: checkKey,
                 status: check.status,
                 remarks: check.remarks,
               }),
@@ -743,12 +799,17 @@ export default function NewInspectionWizard() {
         // Create new checks
         for (const check of formData.engine_checks) {
           if (check.status) {
+            const checkKey = ENGINE_CHECK_MAP[check.item];
+            if (!checkKey) {
+              console.error('Unknown engine check item:', check.item);
+              continue;
+            }
             await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/engine-checks/`, {
               method: 'POST',
               headers,
               body: JSON.stringify({
                 inspection: inspectionId,
-                check_item: check.item,
+                check_item: checkKey,
                 status: check.status,
                 remarks: check.remarks,
               }),
@@ -785,12 +846,17 @@ export default function NewInspectionWizard() {
         // Create new checks
         for (const check of formData.interior_checks) {
           if (check.status) {
+            const checkKey = INTERIOR_CHECK_MAP[check.item];
+            if (!checkKey) {
+              console.error('Unknown interior check item:', check.item);
+              continue;
+            }
             await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/interior-checks/`, {
               method: 'POST',
               headers,
               body: JSON.stringify({
                 inspection: inspectionId,
-                check_item: check.item,
+                check_item: checkKey,
                 status: check.status,
                 remarks: check.remarks,
               }),
@@ -827,12 +893,17 @@ export default function NewInspectionWizard() {
         // Create new checks
         for (const check of formData.functional_checks) {
           if (check.status) {
+            const checkKey = FUNCTIONAL_CHECK_MAP[check.item];
+            if (!checkKey) {
+              console.error('Unknown functional check item:', check.item);
+              continue;
+            }
             await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/functional-checks/`, {
               method: 'POST',
               headers,
               body: JSON.stringify({
                 inspection: inspectionId,
-                check_item: check.item,
+                check_item: checkKey,
                 status: check.status,
                 remarks: check.remarks,
               }),
@@ -869,12 +940,17 @@ export default function NewInspectionWizard() {
         // Create new checks
         for (const check of formData.safety_checks) {
           if (check.status) {
+            const checkKey = SAFETY_CHECK_MAP[check.item];
+            if (!checkKey) {
+              console.error('Unknown safety check item:', check.item);
+              continue;
+            }
             await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/safety-checks/`, {
               method: 'POST',
               headers,
               body: JSON.stringify({
                 inspection: inspectionId,
-                check_item: check.item,
+                check_item: checkKey,
                 status: check.status,
                 remarks: check.remarks,
               }),
@@ -915,8 +991,15 @@ export default function NewInspectionWizard() {
       };
 
       // Save final verification as supervisor remarks
-      await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/supervisor-remarks/`, {
-        method: 'POST',
+      // Use PATCH if remarks already exist, POST otherwise
+      const isRemarksUpdate = !!sectionIds.supervisorRemarksId;
+      const remarksMethod = isRemarksUpdate ? 'PATCH' : 'POST';
+      const remarksUrl = isRemarksUpdate 
+        ? `http://localhost:8000/api/v1/inspections/${inspectionId}/supervisor-remarks/${sectionIds.supervisorRemarksId}/`
+        : `http://localhost:8000/api/v1/inspections/${inspectionId}/supervisor-remarks/`;
+      
+      const remarksResponse = await fetch(remarksUrl, {
+        method: remarksMethod,
         headers,
         body: JSON.stringify({
           inspection: inspectionId,
@@ -928,12 +1011,35 @@ export default function NewInspectionWizard() {
         }),
       });
 
-      setSuccess('Pre-trip inspection created successfully! Redirecting...');
+      if (!remarksResponse.ok) {
+        const errorData = await remarksResponse.json();
+        throw new Error(`Failed to save supervisor remarks: ${JSON.stringify(errorData)}`);
+      }
+      
+      // Store the ID if it was a create
+      if (!isRemarksUpdate) {
+        const remarksResult = await remarksResponse.json();
+        setSectionIds(prev => ({ ...prev, supervisorRemarksId: remarksResult.id?.toString() || null }));
+      }
+
+      // Submit the inspection for approval (changes status from 'draft' to 'submitted')
+      setSuccess('Submitting inspection for approval...');
+      const submitResponse = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/submit/`, {
+        method: 'POST',
+        headers,
+      });
+
+      if (!submitResponse.ok) {
+        const errorData = await submitResponse.json();
+        throw new Error(`Failed to submit inspection: ${errorData.error || JSON.stringify(errorData)}`);
+      }
+
+      setSuccess('Pre-trip inspection submitted for approval! Redirecting...');
       setTimeout(() => {
         router.push('/dashboard/inspections');
       }, 2000);
     } catch (err) {
-      setError(`Failed to save final verification: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setError(`Failed to complete submission: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }

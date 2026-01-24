@@ -10,9 +10,10 @@ from .models import PreTripInspection, RiskScoreSummary, InspectionStatus
 class PreTripInspectionFilter(django_filters.FilterSet):
     """Advanced filtering for pre-trip inspections"""
     
-    # Status filter
-    status = django_filters.ChoiceFilter(
-        choices=InspectionStatus.choices
+    # Status filter (supports comma-separated values for multiple statuses)
+    status = django_filters.CharFilter(
+        method='filter_status',
+        label='Status (comma-separated for multiple)'
     )
     
     # Date range filters
@@ -52,6 +53,18 @@ class PreTripInspectionFilter(django_filters.FilterSet):
         method='filter_critical_failures',
         label='Has critical failures'
     )
+    
+    def filter_status(self, queryset, name, value):
+        """Filter by status - supports comma-separated values for multiple statuses"""
+        if not value:
+            return queryset
+        
+        # Split comma-separated values and filter
+        statuses = [s.strip() for s in value.split(',') if s.strip()]
+        if len(statuses) == 1:
+            return queryset.filter(status=statuses[0])
+        else:
+            return queryset.filter(status__in=statuses)
     
     class Meta:
         model = PreTripInspection

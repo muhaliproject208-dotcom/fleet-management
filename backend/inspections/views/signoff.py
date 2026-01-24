@@ -11,7 +11,7 @@ class InspectionSignOffViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Inspection Sign-Offs.
     
-    Sign-offs are immutable once created (CREATE only).
+    Sign-offs support upsert - if a sign-off for the same role exists, it updates.
     Each inspection can have one sign-off per role (driver, supervisor, mechanic).
     """
     
@@ -43,34 +43,54 @@ class InspectionSignOffViewSet(viewsets.ModelViewSet):
         
         return queryset
     
-    def perform_create(self, serializer):
-        """Create sign-off for the specified inspection"""
+    def create(self, request, *args, **kwargs):
+        """Create or update sign-off (upsert behavior based on role)"""
         inspection_id = self.kwargs.get('inspection_pk')
         
         if not inspection_id:
-            raise DjangoValidationError("Inspection ID is required")
+            return Response(
+                {'error': 'Inspection ID is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         try:
             inspection = PreTripInspection.objects.get(id=inspection_id)
         except PreTripInspection.DoesNotExist:
-            raise DjangoValidationError("Inspection not found")
+            return Response(
+                {'error': 'Inspection not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
         
         # Validate user has permission (supervisor creates all sign-offs)
-        user = self.request.user
+        user = request.user
         if not (user.is_superuser_role or user.is_fleet_manager_role):
             if user.is_transport_supervisor_role and inspection.supervisor != user:
-                raise DjangoValidationError("You can only create sign-offs for your own inspections")
+                return Response(
+                    {'error': 'You can only create sign-offs for your own inspections'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
         
-        # Pass inspection to serializer context for validation
-        serializer.context['inspection'] = inspection
-        serializer.save(inspection=inspection)
-    
-    def create(self, request, *args, **kwargs):
-        """Override create to provide better error messages"""
+        role = request.data.get('role')
+        
+        # Check if sign-off already exists for this role - update if so
         try:
-            return super().create(request, *args, **kwargs)
-        except DjangoValidationError as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            existing = InspectionSignOff.objects.get(inspection=inspection, role=role)
+            serializer = self.get_serializer(existing, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            
+            # Check and update post-trip completion status
+            inspection.check_and_update_post_trip_status()
+            
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except InspectionSignOff.DoesNotExist:
+            # Create new sign-off
+            serializer = self.get_serializer(data=request.data)
+            serializer.context['inspection'] = inspection
+            serializer.is_valid(raise_exception=True)
+            serializer.save(inspection=inspection)
+            
+            # Check and update post-trip completion status
+            inspection.check_and_update_post_trip_status()
+            
+            return Response(serializer.data, status=status.HTTP_201_CREATED)

@@ -85,7 +85,7 @@ class PreTripInspectionViewSet(viewsets.ModelViewSet):
     
     permission_classes = [InspectionPermission]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'driver', 'vehicle', 'inspection_date']
+    filterset_class = PreTripInspectionFilter
     search_fields = ['inspection_id', 'driver__full_name', 'vehicle__registration_number', 'route']
     ordering_fields = ['inspection_date', 'created_at', 'updated_at']
     ordering = ['-inspection_date', '-created_at']
@@ -147,13 +147,53 @@ class PreTripInspectionViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         """Validate that only drafts or rejected inspections can be updated"""
         instance = serializer.instance
-        
+
+        # Allow limited status transitions for post-trip workflow
+        new_status = serializer.validated_data.get('status')
         if not instance.can_edit():
+            post_trip_allowed = {
+                InspectionStatus.APPROVED,
+                InspectionStatus.POST_TRIP_IN_PROGRESS,
+            }
+            if new_status and instance.status in post_trip_allowed:
+                serializer.save()
+                return
             raise DjangoValidationError(
                 f"Cannot edit inspection after submission. Current status: {instance.status}"
             )
-        
+
         serializer.save()
+    
+    @action(detail=True, methods=['post'], permission_classes=[IsTransportSupervisor])
+    def start_post_trip(self, request, pk=None):
+        """
+        Start post-trip inspection.
+        Changes status from 'approved' to 'post_trip_in_progress'.
+        
+        POST /api/v1/inspections/{id}/start_post_trip/
+        """
+        inspection = self.get_object()
+        
+        if inspection.status not in [InspectionStatus.APPROVED, InspectionStatus.POST_TRIP_IN_PROGRESS]:
+            return Response(
+                {'error': f'Can only start post-trip for approved inspections. Current status: {inspection.status}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Update status if not already in progress
+        if inspection.status == InspectionStatus.APPROVED:
+            inspection.status = InspectionStatus.POST_TRIP_IN_PROGRESS
+            inspection.save()
+        
+        return Response(
+            {
+                'message': 'Post-trip inspection started',
+                'inspection_id': inspection.inspection_id,
+                'status': inspection.status,
+                'post_trip_completion_info': inspection.get_post_trip_completion_status()
+            },
+            status=status.HTTP_200_OK
+        )
     
     @action(detail=True, methods=['post'], permission_classes=[IsTransportSupervisor])
     def submit(self, request, pk=None):
@@ -266,7 +306,7 @@ class PreTripInspectionViewSet(viewsets.ModelViewSet):
     def download_pdf(self, request, pk=None):
         """
         Download PDF report for an inspection.
-        Only approved inspections can be downloaded by regular users.
+        Only approved or completed inspections can be downloaded by regular users.
         Fleet managers and admins can download any inspection.
         
         GET /api/v1/inspections/{id}/download_pdf/
@@ -274,11 +314,12 @@ class PreTripInspectionViewSet(viewsets.ModelViewSet):
         inspection = self.get_object()
         user = request.user
         
-        # Permission check: only approved inspections or fleet manager/admin
-        if inspection.status != 'approved':
+        # Permission check: only approved/completed inspections or fleet manager/admin
+        allowed_statuses = [InspectionStatus.APPROVED, InspectionStatus.POST_TRIP_COMPLETED]
+        if inspection.status not in allowed_statuses:
             if not (user.is_superuser_role or user.is_fleet_manager_role):
                 return Response(
-                    {"error": "Only approved inspections can be downloaded"},
+                    {"error": "Only approved or completed inspections can be downloaded"},
                     status=status.HTTP_403_FORBIDDEN
                 )
         

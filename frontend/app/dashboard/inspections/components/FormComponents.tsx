@@ -13,9 +13,9 @@ export function RadioOption({ label, value, selected, onChange, disabled }: Radi
 
   const getColor = () => {
     if (!selected) return '#e0e0e0';
-    if (isPositive) return '#4CAF50';
-    if (isNegative) return '#f44336';
-    return '#2196F3';
+    if (isPositive) return '#000';
+    if (isNegative) return '#666';
+    return '#333';
   };
 
   return (
@@ -106,7 +106,7 @@ export function CheckItem({
           fontSize: '16px'
         }}>
           {label}
-          {required && <span style={{ color: '#f44336', marginLeft: '4px' }}>*</span>}
+          {required && <span style={{ color: '#000', marginLeft: '4px' }}>*</span>}
         </label>
         
         <div style={{ display: 'flex', gap: '15px' }}>
@@ -133,7 +133,7 @@ export function CheckItem({
           marginBottom: '8px',
           fontSize: '14px'
         }}>
-          Remarks {status === 'fail' && <span style={{ color: '#f44336' }}>(Required when failed)</span>}
+          Remarks {status === 'fail' && <span style={{ color: '#000' }}>(Required when failed)</span>}
         </label>
         <textarea
           value={remarks}
