@@ -29,6 +29,17 @@ DEBUG = env_config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = env_config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
 
+# If running on Render, their platform exposes the external hostname in
+# the RENDER_EXTERNAL_HOSTNAME env var; include it automatically when set.
+render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if render_host and render_host not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(render_host)
+
+# Allow onrender.com subdomains as a fallback when ALLOWED_HOSTS wasn't
+# explicitly provided (helps deployments where the env var isn't set).
+if not any('onrender.com' in h for h in ALLOWED_HOSTS):
+    ALLOWED_HOSTS.append('.onrender.com')
+
 
 # Application definition
 
