@@ -5,6 +5,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import datetime
+import logging
 
 from .serializers import (
     UserRegistrationSerializer,
@@ -21,6 +22,7 @@ from .serializers import (
 from .supabase_auth import supabase_auth
 from .models import SupabaseAuthSession
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
@@ -34,6 +36,7 @@ class RegisterView(APIView):
     def post(self, request):
         serializer = UserRegistrationSerializer(data=request.data)
         if not serializer.is_valid():
+            logger.warning(f"Registration validation failed: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         # Extract data

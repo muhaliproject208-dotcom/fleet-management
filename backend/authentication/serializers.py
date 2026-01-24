@@ -20,9 +20,18 @@ class UserRegistrationSerializer(serializers.Serializer):
     )
     
     def validate_email(self, value):
-        """Check if email already exists"""
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("User with this email already exists")
+        """Check if email already exists and if user is verified"""
+        existing_user = User.objects.filter(email=value).first()
+        if existing_user:
+            if existing_user.email_verified:
+                raise serializers.ValidationError(
+                    "An account with this email already exists. Please login instead."
+                )
+            else:
+                raise serializers.ValidationError(
+                    "An account with this email exists but is not verified. "
+                    "Please check your email for the verification code or use 'Resend OTP'."
+                )
         return value
     
     def validate_password(self, value):
