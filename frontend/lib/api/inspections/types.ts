@@ -26,6 +26,13 @@ export enum DocumentStatus {
   MISSING = 'missing',
 }
 
+// Basic model with common fields present on most API objects
+export interface BaseModel {
+  id: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Core Inspection Types
 
 export interface CompletionInfo {
