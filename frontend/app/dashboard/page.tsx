@@ -390,6 +390,112 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Inspections Section */}
+      <div style={{ marginTop: '30px' }}>
+        <h2 style={{ marginBottom: '20px', color: '#000' }}>Inspections Management</h2>
+        
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(3, 1fr)', 
+          gap: '20px' 
+        }}>
+          {/* Pre-Trip Inspections */}
+          <div 
+            className="profile-card" 
+            style={{ 
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: '200px',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0, color: '#000' }}>Pre-Trip Checklist</h3>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
+              <span className="material-icons" style={{ fontSize: '48px', marginBottom: '10px', color: '#4CAF50' }}>
+                checklist
+              </span>
+              <p style={{ textAlign: 'center', color: '#000', marginBottom: '10px' }}>Driver & Vehicle Inspection</p>
+              <p style={{ fontSize: '14px', color: '#666', textAlign: 'center', padding: '0 20px', marginBottom: '20px' }}>
+                Complete health checks, documentation, and vehicle inspections before journey
+              </p>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => router.push('/dashboard/inspections/new')}
+                  className="button-primary"
+                  style={{ width: 'auto', fontSize: '14px', padding: '8px 16px' }}
+                >
+                  Create New
+                </button>
+                <button
+                  onClick={() => router.push('/dashboard/inspections?type=pre-trip')}
+                  className="button-secondary"
+                  style={{ width: 'auto', fontSize: '14px', padding: '8px 16px' }}
+                >
+                  View All
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Awaiting Trip Completion */}
+          <div 
+            onClick={() => router.push('/dashboard/inspections?status=approved')}
+            className="profile-card" 
+            style={{ 
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              transition: 'transform 0.2s',
+              minHeight: '200px',
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.transform = 'translateY(-2px)')}
+            onMouseOut={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0, color: '#000' }}>Awaiting Trip End</h3>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
+              <span className="material-icons" style={{ fontSize: '48px', marginBottom: '10px', color: '#2196F3' }}>
+                local_shipping
+              </span>
+              <p style={{ textAlign: 'center', color: '#000', marginBottom: '10px' }}>Trips In Progress</p>
+              <p style={{ fontSize: '14px', color: '#666', textAlign: 'center', padding: '0 20px' }}>
+                Pre-trip approved, awaiting trip completion for post-trip checklist
+              </p>
+            </div>
+          </div>
+
+          {/* Post-Trip Inspections */}
+          <div 
+            onClick={() => router.push('/dashboard/inspections?type=post-trip')}
+            className="profile-card" 
+            style={{ 
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              transition: 'transform 0.2s',
+              minHeight: '200px',
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.transform = 'translateY(-2px)')}
+            onMouseOut={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0, color: '#000' }}>Post-Trip Checklist</h3>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
+              <span className="material-icons" style={{ fontSize: '48px', marginBottom: '10px', color: '#FF9800' }}>
+                assignment_turned_in
+              </span>
+              <p style={{ textAlign: 'center', color: '#000', marginBottom: '10px' }}>Trip Completion & Evaluation</p>
+              <p style={{ fontSize: '14px', color: '#666', textAlign: 'center', padding: '0 20px' }}>
+                Report incidents, evaluate performance, and complete post-trip assessment
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {user.role === 'fleet_manager' && (
         <div className="profile-card" style={{ marginTop: '30px' }}>
           <h2>Fleet Manager Dashboard</h2>

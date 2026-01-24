@@ -67,6 +67,7 @@ class InspectionListSerializer(serializers.ModelSerializer):
     driver = DriverBasicSerializer(read_only=True)
     vehicle = VehicleBasicSerializer(read_only=True)
     supervisor = UserBasicSerializer(read_only=True)
+    completion_info = serializers.SerializerMethodField()
     
     class Meta:
         model = PreTripInspection
@@ -79,9 +80,16 @@ class InspectionListSerializer(serializers.ModelSerializer):
             'driver',
             'vehicle',
             'supervisor',
+            'completion_info',
             'created_at'
         ]
         read_only_fields = fields
+    
+    def get_completion_info(self, obj):
+        """Get completion info for draft inspections"""
+        if obj.status == InspectionStatus.DRAFT:
+            return obj.get_completion_status()
+        return None
 
 
 class InspectionDetailSerializer(serializers.ModelSerializer):
@@ -91,6 +99,7 @@ class InspectionDetailSerializer(serializers.ModelSerializer):
     supervisor = UserDetailedSerializer(read_only=True)
     mechanic = MechanicBasicSerializer(read_only=True)
     approved_by = UserDetailedSerializer(read_only=True)
+    completion_info = serializers.SerializerMethodField()
     
     class Meta:
         model = PreTripInspection
@@ -109,10 +118,17 @@ class InspectionDetailSerializer(serializers.ModelSerializer):
             'approved_by',
             'approval_status_updated_at',
             'rejection_reason',
+            'completion_info',
             'created_at',
             'updated_at'
         ]
         read_only_fields = fields
+    
+    def get_completion_info(self, obj):
+        """Get completion info for draft inspections"""
+        if obj.status == InspectionStatus.DRAFT:
+            return obj.get_completion_status()
+        return None
 
 
 class InspectionCreateUpdateSerializer(serializers.ModelSerializer):

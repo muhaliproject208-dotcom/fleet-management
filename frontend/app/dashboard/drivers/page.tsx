@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/api/auth';
-import { getDrivers, createDriver, updateDriver, Driver, CreateDriverData, UpdateDriverData } from '@/lib/api/drivers';
+import { getDrivers, createDriver, updateDriver, Driver, CreateDriverData } from '@/lib/api/drivers';
 import { getVehicles, Vehicle } from '@/lib/api/vehicles';
 
 export default function DriversPage() {

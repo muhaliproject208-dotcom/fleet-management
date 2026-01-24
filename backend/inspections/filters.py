@@ -27,17 +27,6 @@ class PreTripInspectionFilter(django_filters.FilterSet):
         label='Inspection date to'
     )
     
-    trip_date_from = django_filters.DateFilter(
-        field_name='trip_date',
-        lookup_expr='gte',
-        label='Trip date from'
-    )
-    trip_date_to = django_filters.DateFilter(
-        field_name='trip_date',
-        lookup_expr='lte',
-        label='Trip date to'
-    )
-    
     # Search filter (inspection_id, driver name, vehicle registration)
     search = django_filters.CharFilter(
         method='filter_search',
@@ -73,8 +62,6 @@ class PreTripInspectionFilter(django_filters.FilterSet):
             'supervisor',
             'inspection_date_from',
             'inspection_date_to',
-            'trip_date_from',
-            'trip_date_to',
             'search',
             'has_critical_failures',
         ]

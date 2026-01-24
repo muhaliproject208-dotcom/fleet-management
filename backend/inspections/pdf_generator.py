@@ -155,9 +155,9 @@ class InspectionPDFGenerator:
         data = [
             ['Driver:', inspection.driver.full_name, 'License:', inspection.driver.license_number],
             ['Vehicle:', f"{inspection.vehicle.registration_number} ({inspection.vehicle.make} {inspection.vehicle.model})", 'Type:', inspection.vehicle.vehicle_type],
-            ['Route:', inspection.route or 'N/A', 'Trip Date:', inspection.trip_date.strftime('%Y-%m-%d')],
-            ['Planned Departure:', inspection.planned_departure_time.strftime('%H:%M') if inspection.planned_departure_time else 'N/A',
-             'Actual Departure:', inspection.actual_departure_time.strftime('%H:%M') if inspection.actual_departure_time else 'N/A'],
+              ['Route:', inspection.route or 'N/A', 'Inspection Date:', inspection.inspection_date.strftime('%Y-%m-%d')],
+              ['Planned Departure:', getattr(inspection, 'planned_departure_time', None).strftime('%H:%M') if getattr(inspection, 'planned_departure_time', None) else 'N/A',
+               'Actual Departure:', getattr(inspection, 'actual_departure_time', None).strftime('%H:%M') if getattr(inspection, 'actual_departure_time', None) else 'N/A'],
         ]
         
         if inspection.supervisor:

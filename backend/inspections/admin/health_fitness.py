@@ -78,7 +78,7 @@ class HealthFitnessCheckAdmin(admin.ModelAdmin):
     
     def get_passed_status(self, obj):
         """Display whether health check passed"""
-        return "✓ Passed" if obj.is_passed() else "✗ Failed"
+        return "Passed" if obj.is_passed() else "Failed"
     get_passed_status.short_description = 'Status'
     
     def has_delete_permission(self, request, obj=None):

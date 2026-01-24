@@ -3,6 +3,7 @@ Full inspection serializer with all nested data for detailed view.
 This provides a complete inspection report with all related data in a single response.
 """
 
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 from ..models import PreTripInspection
 from .base import (
@@ -49,77 +50,55 @@ class PreTripInspectionFullSerializer(serializers.ModelSerializer):
     driver = DriverBasicSerializer(read_only=True)
     vehicle = VehicleDetailedSerializer(read_only=True)
     supervisor = UserDetailedSerializer(read_only=True)
-    mechanic = MechanicBasicSerializer(read_only=True)
-    approved_by = UserDetailedSerializer(read_only=True)
+    mechanic = MechanicBasicSerializer(read_only=True, allow_null=True)
+    approved_by = UserDetailedSerializer(read_only=True, allow_null=True)
     
-    # OneToOne relationships
-    health_fitness = HealthFitnessCheckSerializer(
-        source='health_fitness_check',
-        read_only=True
-    )
-    documentation = DocumentationComplianceSerializer(
-        source='documentation_compliance',
-        read_only=True
-    )
-    post_trip = PostTripReportSerializer(
-        source='post_trip_report',
-        read_only=True
-    )
-    risk_score = RiskScoreSummarySerializer(
-        source='risk_score_summary',
-        read_only=True
-    )
-    supervisor_remarks = SupervisorRemarksSerializer(read_only=True)
-    evaluation = EvaluationSummarySerializer(read_only=True)
+    # OneToOne relationships - allow_null for optional sections
+    health_fitness = HealthFitnessCheckSerializer(read_only=True, allow_null=True)
+    documentation = DocumentationComplianceSerializer(read_only=True, allow_null=True)
+    post_trip = PostTripReportSerializer(read_only=True, allow_null=True)
+    risk_score = RiskScoreSummarySerializer(read_only=True, allow_null=True)
+    supervisor_remarks = SupervisorRemarksSerializer(read_only=True, allow_null=True)
+    evaluation = EvaluationSummarySerializer(read_only=True, allow_null=True)
     
     # ForeignKey relationships (many)
     exterior_checks = VehicleExteriorCheckSerializer(
-        source='vehicleexteriorcheck_set',
         many=True,
         read_only=True
     )
     engine_fluid_checks = EngineFluidCheckSerializer(
-        source='enginefluidcheck_set',
         many=True,
         read_only=True
     )
     interior_cabin_checks = InteriorCabinCheckSerializer(
-        source='interiorcabincheck_set',
         many=True,
         read_only=True
     )
     functional_checks = FunctionalCheckSerializer(
-        source='functionalcheck_set',
         many=True,
         read_only=True
     )
     safety_equipment_checks = SafetyEquipmentCheckSerializer(
-        source='safetyequipmentcheck_set',
         many=True,
         read_only=True
     )
     trip_behaviors = TripBehaviorMonitoringSerializer(
-        source='tripbehaviormonitoring_set',
         many=True,
         read_only=True
     )
     driving_behaviors = DrivingBehaviorCheckSerializer(
-        source='drivingbehaviorcheck_set',
         many=True,
         read_only=True
     )
     corrective_measures = CorrectiveMeasureSerializer(
-        source='correctivemeasure_set',
         many=True,
         read_only=True
     )
     enforcement_actions = EnforcementActionSerializer(
-        source='enforcementaction_set',
         many=True,
         read_only=True
     )
     sign_offs = InspectionSignOffSerializer(
-        source='sign_offs',
         many=True,
         read_only=True
     )
@@ -137,10 +116,9 @@ class PreTripInspectionFullSerializer(serializers.ModelSerializer):
             'inspection_id',
             'status',
             'inspection_date',
-            'trip_date',
             'route',
-            'planned_departure_time',
-            'actual_departure_time',
+            'approved_driving_hours',
+            'approved_rest_stops',
             
             # Core relationships
             'driver',
@@ -196,30 +174,36 @@ class PreTripInspectionFullSerializer(serializers.ModelSerializer):
         total_sections = 12  # Total number of inspection sections
         completed = 0
         
+        def has_related(name):
+            try:
+                return getattr(obj, name) is not None
+            except ObjectDoesNotExist:
+                return False
+        
         # Check each section
-        if hasattr(obj, 'health_fitness_check'):
+        if has_related('health_fitness'):
             completed += 1
-        if hasattr(obj, 'documentation_compliance'):
+        if has_related('documentation'):
             completed += 1
-        if obj.vehicleexteriorcheck_set.exists():
+        if obj.exterior_checks.exists():
             completed += 1
-        if obj.enginefluidcheck_set.exists():
+        if obj.engine_fluid_checks.exists():
             completed += 1
-        if obj.interiorcabincheck_set.exists():
+        if obj.interior_cabin_checks.exists():
             completed += 1
-        if obj.functionalcheck_set.exists():
+        if obj.functional_checks.exists():
             completed += 1
-        if obj.safetyequipmentcheck_set.exists():
+        if obj.safety_equipment_checks.exists():
             completed += 1
-        if obj.tripbehaviormonitoring_set.exists():
+        if obj.trip_behaviors.exists():
             completed += 1
-        if obj.drivingbehaviorcheck_set.exists():
+        if obj.driving_behaviors.exists():
             completed += 1
-        if hasattr(obj, 'post_trip_report'):
+        if has_related('post_trip'):
             completed += 1
-        if hasattr(obj, 'supervisor_remarks'):
+        if has_related('supervisor_remarks'):
             completed += 1
-        if hasattr(obj, 'evaluation'):
+        if has_related('evaluation'):
             completed += 1
         
         return round((completed / total_sections) * 100, 2)
@@ -228,44 +212,24 @@ class PreTripInspectionFullSerializer(serializers.ModelSerializer):
         """Get total violation points from trip behaviors"""
         return sum(
             behavior.violation_points 
-            for behavior in obj.tripbehaviormonitoring_set.all()
+            for behavior in obj.trip_behaviors.all()
         )
     
     def get_has_critical_failures(self, obj):
         """Check if there are any critical failures in vehicle checks"""
-        # Check exterior checks
-        if obj.vehicleexteriorcheck_set.filter(
-            status='fail',
-            is_critical_failure=True
-        ).exists():
-            return True
-        
-        # Check engine fluid checks
-        if obj.enginefluidcheck_set.filter(
-            status='fail',
-            is_critical_failure=True
-        ).exists():
-            return True
-        
-        # Check interior cabin checks
-        if obj.interiorcabincheck_set.filter(
-            status='fail',
-            is_critical_failure=True
-        ).exists():
-            return True
-        
-        # Check functional checks
-        if obj.functionalcheck_set.filter(
-            status='fail',
-            is_critical_failure=True
-        ).exists():
-            return True
-        
-        # Check safety equipment checks
-        if obj.safetyequipmentcheck_set.filter(
-            status='fail',
-            is_critical_failure=True
-        ).exists():
-            return True
-        
+        for check in obj.exterior_checks.all():
+            if check.has_critical_failure():
+                return True
+        for check in obj.engine_fluid_checks.all():
+            if check.has_critical_failure():
+                return True
+        for check in obj.interior_cabin_checks.all():
+            if check.has_critical_failure():
+                return True
+        for check in obj.functional_checks.all():
+            if check.has_critical_failure():
+                return True
+        for check in obj.safety_equipment_checks.all():
+            if check.has_critical_failure():
+                return True
         return False

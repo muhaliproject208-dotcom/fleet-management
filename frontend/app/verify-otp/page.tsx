@@ -12,16 +12,18 @@ export default function VerifyOTPPage() {
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const [email, setEmail] = useState('');
+  const [email] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('verification_email') || '';
+    }
+    return '';
+  });
 
   useEffect(() => {
-    const storedEmail = localStorage.getItem('verification_email');
-    if (storedEmail) {
-      setEmail(storedEmail);
-    } else {
+    if (!email) {
       router.push('/register');
     }
-  }, [router]);
+  }, [router, email]);
 
   if (!email) {
     return null;

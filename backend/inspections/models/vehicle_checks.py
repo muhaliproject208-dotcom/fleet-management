@@ -51,6 +51,13 @@ class BaseVehicleCheck(models.Model):
 class VehicleExteriorCheck(BaseVehicleCheck):
     """Vehicle exterior inspection checks"""
     
+    inspection = models.ForeignKey(
+        PreTripInspection,
+        on_delete=models.CASCADE,
+        related_name='exterior_checks',
+        help_text="Associated pre-trip inspection"
+    )
+    
     class ExteriorItems(models.TextChoices):
         TIRES = 'tires', 'Tires'
         LIGHTS = 'lights', 'Lights'
@@ -79,12 +86,15 @@ class VehicleExteriorCheck(BaseVehicleCheck):
             })
 
 
-# Update the related_name in the ForeignKey
-VehicleExteriorCheck._meta.get_field('inspection').remote_field.related_name = 'exterior_checks'
-
-
 class EngineFluidCheck(BaseVehicleCheck):
     """Engine and fluid inspection checks"""
+    
+    inspection = models.ForeignKey(
+        PreTripInspection,
+        on_delete=models.CASCADE,
+        related_name='engine_fluid_checks',
+        help_text="Associated pre-trip inspection"
+    )
     
     class FluidItems(models.TextChoices):
         ENGINE_OIL = 'engine_oil', 'Engine Oil'
@@ -113,11 +123,15 @@ class EngineFluidCheck(BaseVehicleCheck):
             })
 
 
-EngineFluidCheck._meta.get_field('inspection').remote_field.related_name = 'engine_fluid_checks'
-
-
 class InteriorCabinCheck(BaseVehicleCheck):
     """Interior cabin inspection checks"""
+    
+    inspection = models.ForeignKey(
+        PreTripInspection,
+        on_delete=models.CASCADE,
+        related_name='interior_cabin_checks',
+        help_text="Associated pre-trip inspection"
+    )
     
     class InteriorItems(models.TextChoices):
         DASHBOARD_INDICATORS = 'dashboard_indicators', 'Dashboard Indicators'
@@ -146,11 +160,15 @@ class InteriorCabinCheck(BaseVehicleCheck):
             })
 
 
-InteriorCabinCheck._meta.get_field('inspection').remote_field.related_name = 'interior_cabin_checks'
-
-
 class FunctionalCheck(BaseVehicleCheck):
     """Functional system inspection checks"""
+    
+    inspection = models.ForeignKey(
+        PreTripInspection,
+        on_delete=models.CASCADE,
+        related_name='functional_checks',
+        help_text="Associated pre-trip inspection"
+    )
     
     class FunctionalItems(models.TextChoices):
         BRAKES = 'brakes', 'Brakes'
@@ -182,6 +200,13 @@ FunctionalCheck._meta.get_field('inspection').remote_field.related_name = 'funct
 
 class SafetyEquipmentCheck(BaseVehicleCheck):
     """Safety equipment inspection checks"""
+    
+    inspection = models.ForeignKey(
+        PreTripInspection,
+        on_delete=models.CASCADE,
+        related_name='safety_equipment_checks',
+        help_text="Associated pre-trip inspection"
+    )
     
     class SafetyItems(models.TextChoices):
         FIRE_EXTINGUISHER = 'fire_extinguisher', 'Fire Extinguisher'

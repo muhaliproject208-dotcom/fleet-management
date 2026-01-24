@@ -161,6 +161,85 @@ class PreTripInspection(models.Model):
         """Return True only if status is 'draft' or 'rejected'"""
         return self.status in [InspectionStatus.DRAFT, InspectionStatus.REJECTED]
     
+    def get_completion_status(self):
+        """
+        Calculate completion status for draft inspections.
+        Returns: {
+            'completed_steps': [1, 2, 3, ...],
+            'next_step': 4,
+            'completion_percentage': 33.33,
+            'total_steps': 9
+        }
+        """
+        completed_steps = [1]  # Step 1 is always complete (basic info)
+        
+        # Step 2: Health & Fitness Check
+        try:
+            self.health_fitness
+            completed_steps.append(2)
+        except Exception:
+            pass
+        
+        # Step 3: Documentation & Compliance
+        try:
+            self.documentation
+            completed_steps.append(3)
+        except Exception:
+            pass
+        
+        # Step 4: Exterior Checks
+        try:
+            if self.exterior_checks.exists():
+                completed_steps.append(4)
+        except Exception:
+            pass
+        
+        # Step 5: Engine Checks
+        try:
+            if self.engine_fluid_checks.exists():
+                completed_steps.append(5)
+        except Exception:
+            pass
+        
+        # Step 6: Interior Checks
+        try:
+            if self.interior_cabin_checks.exists():
+                completed_steps.append(6)
+        except Exception:
+            pass
+        
+        # Step 7: Functional Checks
+        try:
+            if self.functional_checks.exists():
+                completed_steps.append(7)
+        except Exception:
+            pass
+        
+        # Step 8: Safety Equipment Checks
+        try:
+            if self.safety_equipment_checks.exists():
+                completed_steps.append(8)
+        except Exception:
+            pass
+        
+        # Step 9: Final Verification (supervisor remarks)
+        try:
+            self.supervisor_remarks
+            completed_steps.append(9)
+        except Exception:
+            pass
+        
+        total_steps = 9
+        next_step = max(completed_steps) + 1 if max(completed_steps) < total_steps else total_steps
+        completion_percentage = round((len(completed_steps) / total_steps) * 100, 2)
+        
+        return {
+            'completed_steps': completed_steps,
+            'next_step': next_step if next_step <= total_steps else None,
+            'completion_percentage': completion_percentage,
+            'total_steps': total_steps
+        }
+    
     def submit_for_approval(self):
         """
         Change status to 'submitted'.
