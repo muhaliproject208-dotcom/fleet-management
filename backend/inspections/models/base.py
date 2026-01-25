@@ -249,7 +249,7 @@ class PreTripInspection(models.Model):
             'completed_steps': [1, 2, 3, ...],
             'next_step': 4,
             'completion_percentage': 33.33,
-            'total_steps': 9
+            'total_steps': 8
         }
         """
         completed_steps = []
@@ -290,28 +290,21 @@ class PreTripInspection(models.Model):
         if 5 in completed_steps:
             completed_steps.append(6)
         
-        # Step 7: Supervisor Remarks
-        try:
-            if hasattr(self, 'supervisor_remarks') and self.supervisor_remarks:
-                completed_steps.append(7)
-        except Exception:
-            pass
-        
-        # Step 8: Evaluation Summary
+        # Step 7: Evaluation Summary
         try:
             self.evaluation
-            completed_steps.append(8)
+            completed_steps.append(7)
         except Exception:
             pass
         
-        # Step 9: Driver Sign-Off
+        # Step 8: Driver Sign-Off
         try:
             if self.sign_offs.filter(role='driver').exists():
-                completed_steps.append(9)
+                completed_steps.append(8)
         except Exception:
             pass
         
-        total_steps = 9
+        total_steps = 8
         next_step = min([s for s in range(1, total_steps + 1) if s not in completed_steps], default=total_steps + 1)
         completion_percentage = round((len(completed_steps) / total_steps) * 100, 2)
         

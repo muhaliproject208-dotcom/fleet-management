@@ -53,11 +53,7 @@ interface PostTripFormData {
     notes: string;
   }>;
   
-  // Form 16: Supervisor Remarks
-  supervisor_remarks: string;
-  recommendation: string;
-  
-  // Form 17: Evaluation Summary
+  // Form 16: Evaluation Summary
   pre_trip_inspection_score: number | null;
   driving_conduct_score: number | null;
   incident_management_score: number | null;
@@ -65,11 +61,11 @@ interface PostTripFormData {
   compliance_documentation_score: number | null;
   comments: string;
   
-  // Form 18: Driver Sign-Off
+  // Form 17: Driver Sign-Off
   driver_signature: string;
 }
 
-const TOTAL_STEPS = 9;
+const TOTAL_STEPS = 8;
 
 // Map display labels to backend valid keys
 const BEHAVIOR_KEY_MAP: Record<string, string> = {
@@ -170,9 +166,6 @@ function PostTripWizardContent() {
     corrective_measures: [],
     enforcement_actions: [],
     
-    supervisor_remarks: '',
-    recommendation: '',
-    
     pre_trip_inspection_score: null,
     driving_conduct_score: null,
     incident_management_score: null,
@@ -219,18 +212,18 @@ function PostTripWizardContent() {
           // Determine which step to show
           if (stepFromUrl) {
             setCurrentStep(parseInt(stepFromUrl));
+          } else if (completionData.next_step !== null && completionData.next_step !== undefined) {
+            // Use the next_step from backend if available
+            setCurrentStep(completionData.next_step);
           } else {
-            const completedSteps = completionData.completed_steps || [];
-            if (completedSteps.length > 0) {
-              const highestCompleted = Math.max(...completedSteps);
-              const nextAfterHighest = highestCompleted + 1;
-              setCurrentStep(nextAfterHighest <= 9 ? nextAfterHighest : 9);
-            } else {
-              setCurrentStep(1);
-            }
+            // Fallback: start from step 1 for new post-trip inspections
+            setCurrentStep(1);
           }
         } else if (stepFromUrl) {
           setCurrentStep(parseInt(stepFromUrl));
+        } else {
+          // No completion data and no step from URL - start from step 1
+          setCurrentStep(1);
         }
         
         // Helper to extract array from API response (handles both array and paginated responses)
@@ -390,28 +383,7 @@ function PostTripWizardContent() {
           }
         }
         
-        // Fetch supervisor remarks (Step 7)
-        const remarksRes = await fetch(
-          `${API_URL}/inspections/${inspectionId}/supervisor-remarks/`,
-          { headers }
-        );
-        if (remarksRes.ok) {
-          const remarksRaw = await remarksRes.json();
-          const remarksData = getArrayFromResponse(remarksRaw);
-          if (remarksData.length > 0) {
-            const remarks = remarksData[0] as {
-              remarks: string;
-              recommendation: string;
-            };
-            setFormData(prev => ({
-              ...prev,
-              supervisor_remarks: remarks.remarks || '',
-              recommendation: remarks.recommendation || '',
-            }));
-          }
-        }
-        
-        // Fetch evaluation summary (Step 8)
+        // Fetch evaluation summary (Step 7)
         const evalRes = await fetch(
           `${API_URL}/inspections/${inspectionId}/evaluation/`,
           { headers }
@@ -440,7 +412,7 @@ function PostTripWizardContent() {
           }
         }
         
-        // Fetch sign-offs (Step 9)
+        // Fetch sign-offs (Step 8)
         const signOffsRes = await fetch(
           `${API_URL}/inspections/${inspectionId}/sign-offs/`,
           { headers }
@@ -540,12 +512,6 @@ function PostTripWizardContent() {
         }
         break;
       case 7:
-        if (!formData.supervisor_remarks.trim()) {
-          setError('Supervisor remarks are required');
-          return false;
-        }
-        break;
-      case 8:
         if (formData.pre_trip_inspection_score === null || formData.driving_conduct_score === null ||
             formData.incident_management_score === null || formData.post_trip_reporting_score === null ||
             formData.compliance_documentation_score === null) {
@@ -553,7 +519,7 @@ function PostTripWizardContent() {
           return false;
         }
         break;
-      case 9:
+      case 8:
         if (!formData.driver_signature.trim()) {
           setError('Driver signature is required');
           return false;
@@ -692,22 +658,6 @@ function PostTripWizardContent() {
           break;
 
         case 7:
-          // Save supervisor remarks
-          const remarksResponse = await fetch(`${API_URL}/inspections/${inspectionId}/supervisor-remarks/`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-              remarks: formData.supervisor_remarks,
-              recommendation: formData.recommendation,
-            }),
-          });
-          if (!remarksResponse.ok) {
-            const errorData = await remarksResponse.json();
-            throw new Error(errorData.detail || 'Failed to save supervisor remarks');
-          }
-          break;
-
-        case 8:
           // Save evaluation
           const evalResponse = await fetch(`${API_URL}/inspections/${inspectionId}/evaluation/`, {
             method: 'POST',
@@ -727,7 +677,7 @@ function PostTripWizardContent() {
           }
           break;
 
-        case 9:
+        case 8:
           // Save driver sign-off (final step)
           const signOffResponse = await fetch(`${API_URL}/inspections/${inspectionId}/sign-offs/`, {
             method: 'POST',
@@ -856,7 +806,6 @@ function PostTripWizardContent() {
       'Risk Score Summary',
       'Corrective Measures',
       'Enforcement Actions',
-      'Supervisor Remarks',
       'Evaluation Summary',
       'Driver Sign-Off'
     ];
@@ -1333,35 +1282,6 @@ function PostTripWizardContent() {
         );
 
       case 7:
-        return (
-          <div>
-            <h2 style={{ color: '#000', marginBottom: '20px' }}>{getFormTitle()}</h2>
-            
-            <div style={{ marginBottom: '20px' }}>
-              <label className="label">Supervisor Remarks *</label>
-              <textarea
-                className="input"
-                rows={5}
-                placeholder="Enter detailed supervisor remarks..."
-                value={formData.supervisor_remarks}
-                onChange={(e) => setFormData({ ...formData, supervisor_remarks: e.target.value })}
-              />
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label className="label">Recommendation</label>
-              <textarea
-                className="input"
-                rows={3}
-                placeholder="Enter recommendations for driver..."
-                value={formData.recommendation}
-                onChange={(e) => setFormData({ ...formData, recommendation: e.target.value })}
-              />
-            </div>
-          </div>
-        );
-
-      case 8:
         const overallScore = calculateOverallScore();
         return (
           <div>
@@ -1442,7 +1362,7 @@ function PostTripWizardContent() {
           </div>
         );
 
-      case 9:
+      case 8:
         return (
           <div>
             <h2 style={{ color: '#000', marginBottom: '20px' }}>{getFormTitle()}</h2>
