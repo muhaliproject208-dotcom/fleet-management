@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/api/auth';
 import { getInspections } from '@/lib/api/inspections';
+import { API_URL } from '@/lib/api';
 import { PreTripInspection, InspectionStatus } from '@/lib/api/inspections/types';
 import InspectionStatusBadge from '../inspections/components/InspectionStatusBadge';
 
@@ -89,7 +90,7 @@ export default function ReportsPage() {
     try {
       const token = localStorage.getItem('access_token');
       const response = await fetch(
-        `http://localhost:8000/api/v1/inspections/${inspectionId}/download_pdf/`,
+        `${API_URL}/inspections/${inspectionId}/download_pdf/`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,

@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { isAuthenticated } from '@/lib/api/auth';
+import { API_URL } from '@/lib/api';
 import ProgressTracker from '../../components/ProgressTracker';
 import { RadioOption } from '../../components/FormComponents';
 
@@ -196,7 +197,7 @@ function PostTripWizardContent() {
         const headers = { 'Authorization': `Bearer ${token}` };
         
         // Start post-trip (this also returns completion info)
-        const startResponse = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/start_post_trip/`, {
+        const startResponse = await fetch(`${API_URL}/inspections/${inspectionId}/start_post_trip/`, {
           method: 'POST',
           headers: { 
             'Authorization': `Bearer ${token}`,
@@ -244,7 +245,7 @@ function PostTripWizardContent() {
         // Fetch existing post-trip data to pre-populate form
         // Fetch trip behaviors (Step 1)
         const tripBehaviorsRes = await fetch(
-          `http://localhost:8000/api/v1/inspections/${inspectionId}/trip-behaviors/`,
+          `${API_URL}/inspections/${inspectionId}/trip-behaviors/`,
           { headers }
         );
         if (tripBehaviorsRes.ok) {
@@ -271,7 +272,7 @@ function PostTripWizardContent() {
         
         // Fetch driving behaviors (Step 2)
         const drivingBehaviorsRes = await fetch(
-          `http://localhost:8000/api/v1/inspections/${inspectionId}/driving-behaviors/`,
+          `${API_URL}/inspections/${inspectionId}/driving-behaviors/`,
           { headers }
         );
         if (drivingBehaviorsRes.ok) {
@@ -298,7 +299,7 @@ function PostTripWizardContent() {
         
         // Fetch post-trip report (Step 3)
         const postTripRes = await fetch(
-          `http://localhost:8000/api/v1/inspections/${inspectionId}/post-trip/`,
+          `${API_URL}/inspections/${inspectionId}/post-trip/`,
           { headers }
         );
         if (postTripRes.ok) {
@@ -331,7 +332,7 @@ function PostTripWizardContent() {
         
         // Fetch corrective measures (Step 5)
         const correctiveRes = await fetch(
-          `http://localhost:8000/api/v1/inspections/${inspectionId}/corrective-measures/`,
+          `${API_URL}/inspections/${inspectionId}/corrective-measures/`,
           { headers }
         );
         if (correctiveRes.ok) {
@@ -362,7 +363,7 @@ function PostTripWizardContent() {
         
         // Fetch enforcement actions (Step 6)
         const enforcementRes = await fetch(
-          `http://localhost:8000/api/v1/inspections/${inspectionId}/enforcement-actions/`,
+          `${API_URL}/inspections/${inspectionId}/enforcement-actions/`,
           { headers }
         );
         if (enforcementRes.ok) {
@@ -391,7 +392,7 @@ function PostTripWizardContent() {
         
         // Fetch supervisor remarks (Step 7)
         const remarksRes = await fetch(
-          `http://localhost:8000/api/v1/inspections/${inspectionId}/supervisor-remarks/`,
+          `${API_URL}/inspections/${inspectionId}/supervisor-remarks/`,
           { headers }
         );
         if (remarksRes.ok) {
@@ -412,7 +413,7 @@ function PostTripWizardContent() {
         
         // Fetch evaluation summary (Step 8)
         const evalRes = await fetch(
-          `http://localhost:8000/api/v1/inspections/${inspectionId}/evaluation/`,
+          `${API_URL}/inspections/${inspectionId}/evaluation/`,
           { headers }
         );
         if (evalRes.ok) {
@@ -441,7 +442,7 @@ function PostTripWizardContent() {
         
         // Fetch sign-offs (Step 9)
         const signOffsRes = await fetch(
-          `http://localhost:8000/api/v1/inspections/${inspectionId}/sign-offs/`,
+          `${API_URL}/inspections/${inspectionId}/sign-offs/`,
           { headers }
         );
         if (signOffsRes.ok) {
@@ -584,7 +585,7 @@ function PostTripWizardContent() {
               console.error('Unknown behavior:', behavior.behavior);
               continue;
             }
-            const response = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/trip-behaviors/`, {
+            const response = await fetch(`${API_URL}/inspections/${inspectionId}/trip-behaviors/`, {
               method: 'POST',
               headers,
               body: JSON.stringify({
@@ -609,7 +610,7 @@ function PostTripWizardContent() {
               console.error('Unknown driving behavior:', behavior.behavior);
               continue;
             }
-            const response = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/driving-behaviors/`, {
+            const response = await fetch(`${API_URL}/inspections/${inspectionId}/driving-behaviors/`, {
               method: 'POST',
               headers,
               body: JSON.stringify({
@@ -627,7 +628,7 @@ function PostTripWizardContent() {
 
         case 3:
           // Save post-trip report
-          const postTripResponse = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/post-trip/`, {
+          const postTripResponse = await fetch(`${API_URL}/inspections/${inspectionId}/post-trip/`, {
             method: 'POST',
             headers,
             body: JSON.stringify({
@@ -649,7 +650,7 @@ function PostTripWizardContent() {
 
         case 4:
           // Save Risk Score Summary - the backend auto-calculates from trip behaviors
-          const riskScoreResponse = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/risk-score/`, {
+          const riskScoreResponse = await fetch(`${API_URL}/inspections/${inspectionId}/risk-score/`, {
             method: 'POST',
             headers,
             body: JSON.stringify({}),  // Empty body - backend auto-calculates
@@ -663,7 +664,7 @@ function PostTripWizardContent() {
         case 5:
           // Save corrective measures
           for (const measure of formData.corrective_measures) {
-            const response = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/corrective-measures/`, {
+            const response = await fetch(`${API_URL}/inspections/${inspectionId}/corrective-measures/`, {
               method: 'POST',
               headers,
               body: JSON.stringify(measure),
@@ -678,7 +679,7 @@ function PostTripWizardContent() {
         case 6:
           // Save enforcement actions
           for (const action of formData.enforcement_actions) {
-            const response = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/enforcement-actions/`, {
+            const response = await fetch(`${API_URL}/inspections/${inspectionId}/enforcement-actions/`, {
               method: 'POST',
               headers,
               body: JSON.stringify(action),
@@ -692,7 +693,7 @@ function PostTripWizardContent() {
 
         case 7:
           // Save supervisor remarks
-          const remarksResponse = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/supervisor-remarks/`, {
+          const remarksResponse = await fetch(`${API_URL}/inspections/${inspectionId}/supervisor-remarks/`, {
             method: 'POST',
             headers,
             body: JSON.stringify({
@@ -708,7 +709,7 @@ function PostTripWizardContent() {
 
         case 8:
           // Save evaluation
-          const evalResponse = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/evaluation/`, {
+          const evalResponse = await fetch(`${API_URL}/inspections/${inspectionId}/evaluation/`, {
             method: 'POST',
             headers,
             body: JSON.stringify({
@@ -728,7 +729,7 @@ function PostTripWizardContent() {
 
         case 9:
           // Save driver sign-off (final step)
-          const signOffResponse = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/sign-offs/`, {
+          const signOffResponse = await fetch(`${API_URL}/inspections/${inspectionId}/sign-offs/`, {
             method: 'POST',
             headers,
             body: JSON.stringify({
@@ -747,7 +748,7 @@ function PostTripWizardContent() {
       try {
         const token = localStorage.getItem('access_token');
         const completionRes = await fetch(
-          `http://localhost:8000/api/v1/inspections/${inspectionId}/`,
+          `${API_URL}/inspections/${inspectionId}/`,
           { headers: { 'Authorization': `Bearer ${token}` } }
         );
         if (completionRes.ok) {
@@ -813,7 +814,7 @@ function PostTripWizardContent() {
       };
 
       // Save driver sign-off (final step)
-      const signOffResponse = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/sign-offs/`, {
+      const signOffResponse = await fetch(`${API_URL}/inspections/${inspectionId}/sign-offs/`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -828,7 +829,7 @@ function PostTripWizardContent() {
       }
 
       // Update inspection status to completed
-      await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/`, {
+      await fetch(`${API_URL}/inspections/${inspectionId}/`, { {
         method: 'PATCH',
         headers,
         body: JSON.stringify({

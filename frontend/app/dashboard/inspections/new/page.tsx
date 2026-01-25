@@ -7,6 +7,7 @@ import { getDrivers, Driver } from '@/lib/api/drivers';
 import { getVehicles, Vehicle } from '@/lib/api/vehicles';
 import { getMechanics, Mechanic } from '@/lib/api/mechanics';
 import { createInspection, getInspection } from '@/lib/api/inspections';
+import { API_URL } from '@/lib/api';
 import type { VehicleCheck } from '@/lib/api/inspections/types';
 import ProgressTracker from '../components/ProgressTracker';
 import { RadioOption, CheckItem } from '../components/FormComponents';
@@ -652,8 +653,8 @@ export default function NewInspectionWizard() {
         const isUpdate = savedSections.health && sectionIds.healthId;
         const healthMethod = isUpdate ? 'PATCH' : 'POST';
         const healthUrl = isUpdate 
-          ? `http://localhost:8000/api/v1/inspections/${inspectionId}/health-fitness/${sectionIds.healthId}/`
-          : `http://localhost:8000/api/v1/inspections/${inspectionId}/health-fitness/`;
+          ? `${API_URL}/inspections/${inspectionId}/health-fitness/${sectionIds.healthId}/`
+          : `${API_URL}/inspections/${inspectionId}/health-fitness/`;
         
         const healthResponse = await fetch(healthUrl, { 
           method: healthMethod, 
@@ -703,8 +704,8 @@ export default function NewInspectionWizard() {
         const isDocUpdate = savedSections.documentation && sectionIds.documentationId;
         const docMethod = isDocUpdate ? 'PATCH' : 'POST';
         const docUrl = isDocUpdate
-          ? `http://localhost:8000/api/v1/inspections/${inspectionId}/documentation/${sectionIds.documentationId}/`
-          : `http://localhost:8000/api/v1/inspections/${inspectionId}/documentation/`;
+          ? `${API_URL}/inspections/${inspectionId}/documentation/${sectionIds.documentationId}/`
+          : `${API_URL}/inspections/${inspectionId}/documentation/`;
         
         const docResponse = await fetch(docUrl, { 
           method: docMethod, 
@@ -735,14 +736,14 @@ export default function NewInspectionWizard() {
         // If already saved, delete all existing checks first
         if (savedSections.exterior) {
           const existingChecks = await fetch(
-            `http://localhost:8000/api/v1/inspections/${inspectionId}/exterior-checks/`,
+            `${API_URL}/inspections/${inspectionId}/exterior-checks/`,
             { headers }
           );
           if (existingChecks.ok) {
             const checks = await existingChecks.json();
             for (const check of checks) {
               await fetch(
-                `http://localhost:8000/api/v1/inspections/${inspectionId}/exterior-checks/${check.id}/`,
+                `${API_URL}/inspections/${inspectionId}/exterior-checks/${check.id}/`,
                 { method: 'DELETE', headers }
               );
             }
@@ -757,7 +758,7 @@ export default function NewInspectionWizard() {
               console.error('Unknown exterior check item:', check.item);
               continue;
             }
-            await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/exterior-checks/`, {
+            await fetch(`${API_URL}/inspections/${inspectionId}/exterior-checks/`, {
               method: 'POST',
               headers,
               body: JSON.stringify({
@@ -782,14 +783,14 @@ export default function NewInspectionWizard() {
         // If already saved, delete all existing checks first
         if (savedSections.engine) {
           const existingChecks = await fetch(
-            `http://localhost:8000/api/v1/inspections/${inspectionId}/engine-checks/`,
+            `${API_URL}/inspections/${inspectionId}/engine-checks/`,
             { headers }
           );
           if (existingChecks.ok) {
             const checks = await existingChecks.json();
             for (const check of checks) {
               await fetch(
-                `http://localhost:8000/api/v1/inspections/${inspectionId}/engine-checks/${check.id}/`,
+                `${API_URL}/inspections/${inspectionId}/engine-checks/${check.id}/`,
                 { method: 'DELETE', headers }
               );
             }
@@ -804,7 +805,7 @@ export default function NewInspectionWizard() {
               console.error('Unknown engine check item:', check.item);
               continue;
             }
-            await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/engine-checks/`, {
+            await fetch(`${API_URL}/inspections/${inspectionId}/engine-checks/`, {
               method: 'POST',
               headers,
               body: JSON.stringify({
@@ -829,14 +830,14 @@ export default function NewInspectionWizard() {
         // If already saved, delete all existing checks first
         if (savedSections.interior) {
           const existingChecks = await fetch(
-            `http://localhost:8000/api/v1/inspections/${inspectionId}/interior-checks/`,
+            `${API_URL}/inspections/${inspectionId}/interior-checks/`,
             { headers }
           );
           if (existingChecks.ok) {
             const checks = await existingChecks.json();
             for (const check of checks) {
               await fetch(
-                `http://localhost:8000/api/v1/inspections/${inspectionId}/interior-checks/${check.id}/`,
+                `${API_URL}/inspections/${inspectionId}/interior-checks/${check.id}/`,
                 { method: 'DELETE', headers }
               );
             }
@@ -851,7 +852,7 @@ export default function NewInspectionWizard() {
               console.error('Unknown interior check item:', check.item);
               continue;
             }
-            await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/interior-checks/`, {
+            await fetch(`${API_URL}/inspections/${inspectionId}/interior-checks/`, {
               method: 'POST',
               headers,
               body: JSON.stringify({
@@ -876,14 +877,14 @@ export default function NewInspectionWizard() {
         // If already saved, delete all existing checks first
         if (savedSections.functional) {
           const existingChecks = await fetch(
-            `http://localhost:8000/api/v1/inspections/${inspectionId}/functional-checks/`,
+            `${API_URL}/inspections/${inspectionId}/functional-checks/`,
             { headers }
           );
           if (existingChecks.ok) {
             const checks = await existingChecks.json();
             for (const check of checks) {
               await fetch(
-                `http://localhost:8000/api/v1/inspections/${inspectionId}/functional-checks/${check.id}/`,
+                `${API_URL}/inspections/${inspectionId}/functional-checks/${check.id}/`,
                 { method: 'DELETE', headers }
               );
             }
@@ -898,7 +899,7 @@ export default function NewInspectionWizard() {
               console.error('Unknown functional check item:', check.item);
               continue;
             }
-            await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/functional-checks/`, {
+            await fetch(`${API_URL}/inspections/${inspectionId}/functional-checks/`, {
               method: 'POST',
               headers,
               body: JSON.stringify({
@@ -923,14 +924,14 @@ export default function NewInspectionWizard() {
         // If already saved, delete all existing checks first
         if (savedSections.safety) {
           const existingChecks = await fetch(
-            `http://localhost:8000/api/v1/inspections/${inspectionId}/safety-checks/`,
+            `${API_URL}/inspections/${inspectionId}/safety-checks/`,
             { headers }
           );
           if (existingChecks.ok) {
             const checks = await existingChecks.json();
             for (const check of checks) {
               await fetch(
-                `http://localhost:8000/api/v1/inspections/${inspectionId}/safety-checks/${check.id}/`,
+                `${API_URL}/inspections/${inspectionId}/safety-checks/${check.id}/`,
                 { method: 'DELETE', headers }
               );
             }
@@ -945,7 +946,7 @@ export default function NewInspectionWizard() {
               console.error('Unknown safety check item:', check.item);
               continue;
             }
-            await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/safety-checks/`, {
+            await fetch(`${API_URL}/inspections/${inspectionId}/safety-checks/`, {
               method: 'POST',
               headers,
               body: JSON.stringify({
@@ -995,8 +996,8 @@ export default function NewInspectionWizard() {
       const isRemarksUpdate = !!sectionIds.supervisorRemarksId;
       const remarksMethod = isRemarksUpdate ? 'PATCH' : 'POST';
       const remarksUrl = isRemarksUpdate 
-        ? `http://localhost:8000/api/v1/inspections/${inspectionId}/supervisor-remarks/${sectionIds.supervisorRemarksId}/`
-        : `http://localhost:8000/api/v1/inspections/${inspectionId}/supervisor-remarks/`;
+        ? `${API_URL}/inspections/${inspectionId}/supervisor-remarks/${sectionIds.supervisorRemarksId}/`
+        : `${API_URL}/inspections/${inspectionId}/supervisor-remarks/`;
       
       const remarksResponse = await fetch(remarksUrl, {
         method: remarksMethod,
@@ -1024,7 +1025,7 @@ export default function NewInspectionWizard() {
 
       // Submit the inspection for approval (changes status from 'draft' to 'submitted')
       setSuccess('Submitting inspection for approval...');
-      const submitResponse = await fetch(`http://localhost:8000/api/v1/inspections/${inspectionId}/submit/`, {
+      const submitResponse = await fetch(`${API_URL}/inspections/${inspectionId}/submit/`, {
         method: 'POST',
         headers,
       });
