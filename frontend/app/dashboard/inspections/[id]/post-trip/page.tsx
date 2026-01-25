@@ -711,6 +711,32 @@ function PostTripWizardContent() {
       } catch (refreshErr) {
         console.error('Error refreshing completion info:', refreshErr);
       }
+      
+      // Optimistically update local completion info to include the current step
+      // This ensures the progress bar updates even if the backend response is stale
+      setCompletionInfo(prev => {
+        if (!prev) {
+          return {
+            completed_steps: [currentStep],
+            next_step: currentStep < TOTAL_STEPS ? currentStep + 1 : null,
+            completion_percentage: Math.round((1 / TOTAL_STEPS) * 100),
+            total_steps: TOTAL_STEPS,
+            is_complete: currentStep === TOTAL_STEPS
+          };
+        }
+        const newCompletedSteps = prev.completed_steps.includes(currentStep) 
+          ? prev.completed_steps 
+          : [...prev.completed_steps, currentStep].sort((a, b) => a - b);
+        const newPercentage = Math.round((newCompletedSteps.length / TOTAL_STEPS) * 100);
+        const newNextStep = Math.min(...Array.from({length: TOTAL_STEPS}, (_, i) => i + 1).filter(s => !newCompletedSteps.includes(s)), TOTAL_STEPS + 1);
+        return {
+          ...prev,
+          completed_steps: newCompletedSteps,
+          next_step: newNextStep <= TOTAL_STEPS ? newNextStep : null,
+          completion_percentage: newPercentage,
+          is_complete: newCompletedSteps.length === TOTAL_STEPS
+        };
+      });
 
       return true;
     } catch (err) {
