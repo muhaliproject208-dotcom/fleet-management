@@ -359,7 +359,7 @@ export default function InspectionsPage() {
                               // Go to step after highest completed
                               const completedSteps = inspection.post_trip_completion_info?.completed_steps || [];
                               const highestCompleted = completedSteps.length > 0 ? Math.max(...completedSteps) : 0;
-                              const nextStep = Math.min(highestCompleted + 1, 9);
+                              const nextStep = Math.min(highestCompleted + 1, 8);
                               router.push(`/dashboard/inspections/${inspection.id}/post-trip?step=${nextStep}`);
                             }}
                             className="button-primary"
@@ -371,7 +371,7 @@ export default function InspectionsPage() {
                               borderColor: '#FF9800',
                             }}
                           >
-                            Resume Post-Trip ({inspection.post_trip_completion_info?.completed_steps.length || 0}/9)
+                            Resume Post-Trip ({inspection.post_trip_completion_info?.completed_steps.length || 0}/8)
                           </button>
                         ) : inspection.status === InspectionStatus.APPROVED ? (
                           <button
@@ -397,7 +397,7 @@ export default function InspectionsPage() {
                               // Go to step after highest completed
                               const completedSteps = inspection.post_trip_completion_info?.completed_steps || [];
                               const highestCompleted = completedSteps.length > 0 ? Math.max(...completedSteps) : 0;
-                              const nextStep = Math.min(highestCompleted + 1, 9);
+                              const nextStep = Math.min(highestCompleted + 1, 8);
                               router.push(`/dashboard/inspections/${inspection.id}/post-trip?step=${nextStep}`);
                             }}
                             className="button-primary"
@@ -409,7 +409,7 @@ export default function InspectionsPage() {
                               borderColor: '#FF9800',
                             }}
                           >
-                            Resume Post-Trip ({inspection.post_trip_completion_info?.completed_steps.length || 0}/9)
+                            Resume Post-Trip ({inspection.post_trip_completion_info?.completed_steps.length || 0}/8)
                           </button>
                         ) : inspection.status === InspectionStatus.POST_TRIP_COMPLETED ? (
                           <span
