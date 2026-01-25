@@ -829,7 +829,7 @@ function PostTripWizardContent() {
       }
 
       // Update inspection status to completed
-      await fetch(`${API_URL}/inspections/${inspectionId}/`, { {
+      await fetch(`${API_URL}/inspections/${inspectionId}/`, {
         method: 'PATCH',
         headers,
         body: JSON.stringify({
