@@ -263,7 +263,7 @@ class InspectionPDFGenerator:
         data = [['Component', 'Status', 'Remarks']]
         for check in checks:
             data.append([
-                check.check_item,
+                self._normalize_field_name(check.check_item),
                 self._get_status_display(check.status),
                 check.remarks or 'N/A'
             ])
@@ -285,7 +285,7 @@ class InspectionPDFGenerator:
         data = [['Component', 'Status', 'Remarks']]
         for check in checks:
             data.append([
-                check.check_item,
+                self._normalize_field_name(check.check_item),
                 self._get_status_display(check.status),
                 check.remarks or 'N/A'
             ])
@@ -307,7 +307,7 @@ class InspectionPDFGenerator:
         data = [['Component', 'Status', 'Remarks']]
         for check in checks:
             data.append([
-                check.check_item,
+                self._normalize_field_name(check.check_item),
                 self._get_status_display(check.status),
                 check.remarks or 'N/A'
             ])
@@ -329,7 +329,7 @@ class InspectionPDFGenerator:
         data = [['Component', 'Status', 'Remarks']]
         for check in checks:
             data.append([
-                check.check_item,
+                self._normalize_field_name(check.check_item),
                 self._get_status_display(check.status),
                 check.remarks or 'N/A'
             ])
@@ -351,7 +351,7 @@ class InspectionPDFGenerator:
         data = [['Equipment', 'Status', 'Remarks']]
         for check in checks:
             data.append([
-                check.check_item,
+                self._normalize_field_name(check.check_item),
                 self._get_status_display(check.status),
                 check.remarks or 'N/A'
             ])
@@ -373,7 +373,7 @@ class InspectionPDFGenerator:
         data = [['Behavior Item', 'Status', 'Violation Points', 'Notes']]
         for behavior in behaviors:
             data.append([
-                behavior.behavior_item,
+                self._normalize_field_name(behavior.behavior_item),
                 self._get_status_display(behavior.status),
                 str(behavior.violation_points),
                 behavior.notes or 'N/A'
@@ -405,7 +405,7 @@ class InspectionPDFGenerator:
         data = [['Behavior', 'Compliant', 'Remarks']]
         for behavior in behaviors:
             data.append([
-                behavior.behavior_item,
+                self._normalize_field_name(behavior.behavior_item),
                 'Yes' if behavior.status else 'No',
                 behavior.remarks or 'N/A'
             ])
@@ -777,6 +777,13 @@ class InspectionPDFGenerator:
         self.story.append(Spacer(1, 0.3*inch))
     
     # Helper methods for styling
+    def _normalize_field_name(self, field_name):
+        """Convert snake_case field names to readable Title Case"""
+        if not field_name:
+            return 'N/A'
+        # Replace underscores with spaces and convert to title case
+        return field_name.replace('_', ' ').title()
+    
     def _get_status_display(self, status):
         """Get colored status display"""
         status_text = status.replace('_', ' ').upper()
