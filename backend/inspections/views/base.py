@@ -345,6 +345,48 @@ class PreTripInspectionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @action(detail=True, methods=['get'])
+    def download_prechecklist_pdf(self, request, pk=None):
+        """
+        Download Pre-Checklist PDF report for an inspection.
+        Includes only pre-trip sections (Driver Info, Health/Fitness, 
+        Documentation, Vehicle Checks).
+        Available for submitted, approved, or completed inspections.
+        
+        GET /api/v1/inspections/{id}/download_prechecklist_pdf/
+        """
+        inspection = self.get_object()
+        user = request.user
+        
+        # Permission check: draft inspections not allowed
+        if inspection.status == InspectionStatus.DRAFT:
+            return Response(
+                {"error": "Cannot generate PDF for draft inspections. Please submit first."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        try:
+            # Generate Pre-Checklist PDF
+            pdf_generator = InspectionPDFGenerator()
+            pdf_file = pdf_generator.generate_prechecklist_report(inspection.id)
+            
+            # Return as download
+            response = HttpResponse(pdf_file, content_type='application/pdf')
+            filename = f'prechecklist_{inspection.inspection_id}.pdf'
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+            
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to generate PDF: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
         """

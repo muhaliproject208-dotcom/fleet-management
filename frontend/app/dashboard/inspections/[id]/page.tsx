@@ -3,7 +3,7 @@
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { isAuthenticated, getCurrentUser } from '@/lib/api/auth';
-import { getInspection, approveInspection, rejectInspection } from '@/lib/api/inspections';
+import { getInspection, approveInspection, rejectInspection, downloadPrechecklistPDF } from '@/lib/api/inspections';
 import { PreTripInspectionFull, InspectionStatus } from '@/lib/api/inspections/types';
 import InspectionStatusBadge from '../components/InspectionStatusBadge';
 
@@ -21,6 +21,7 @@ export default function InspectionDetailPage() {
   const [showPostTripConfirmModal, setShowPostTripConfirmModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -111,6 +112,23 @@ export default function InspectionDetailPage() {
     setActionLoading(false);
   };
 
+  const handleDownloadPrechecklistPDF = async () => {
+    if (!inspection) return;
+    
+    setPdfLoading(true);
+    setError('');
+    
+    const response = await downloadPrechecklistPDF(inspection.id, inspection.inspection_id);
+    
+    if (response.error) {
+      setError(response.error);
+    } else {
+      setSuccess('Pre-checklist PDF downloaded successfully!');
+    }
+    
+    setPdfLoading(false);
+  };
+
   const canApproveOrReject = userRole === 'fleet_manager' || userRole === 'superuser';
 
   if (loading) {
@@ -181,6 +199,18 @@ export default function InspectionDetailPage() {
                 }}
               >
                 {actionLoading ? 'Processing...' : 'Approve'}
+              </button>
+              <button 
+                onClick={handleDownloadPrechecklistPDF}
+                disabled={pdfLoading}
+                className="button-primary"
+                style={{ 
+                  width: 'auto', 
+                  backgroundColor: '#2c5aa0',
+                  borderColor: '#2c5aa0',
+                }}
+              >
+                {pdfLoading ? 'Generating...' : 'Generate PDF'}
               </button>
               <button 
                 onClick={() => setShowRejectModal(true)}

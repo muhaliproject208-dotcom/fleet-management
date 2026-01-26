@@ -699,6 +699,83 @@ class InspectionPDFGenerator:
         
         return pdf
     
+    def generate_prechecklist_report(self, inspection_id):
+        """Generate PDF report for pre-checklist only (sections 1-8)"""
+        try:
+            inspection = PreTripInspection.objects.select_related(
+                'driver', 'vehicle', 'supervisor'
+            ).get(id=inspection_id)
+        except PreTripInspection.DoesNotExist:
+            raise ValueError(f"Inspection with ID {inspection_id} not found")
+        
+        # Create PDF buffer
+        buffer = BytesIO()
+        
+        # Create document with custom canvas for watermarks
+        watermark = None
+        if inspection.status == 'draft':
+            watermark = 'DRAFT'
+        elif inspection.status == 'rejected':
+            watermark = 'REJECTED'
+        elif inspection.status == 'submitted':
+            watermark = 'PENDING APPROVAL'
+        
+        def create_canvas(*args, **kwargs):
+            canvas = NumberedCanvas(*args, **kwargs)
+            canvas.watermark_text = watermark
+            return canvas
+        
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=letter,
+            rightMargin=0.75*inch,
+            leftMargin=0.75*inch,
+            topMargin=0.75*inch,
+            bottomMargin=0.75*inch
+        )
+        
+        # Build story - Pre-Checklist sections only (1-8)
+        self.story = []
+        self.generate_prechecklist_header(inspection)
+        self.generate_driver_trip_info(inspection)
+        self.generate_health_fitness(inspection)
+        self.generate_documentation(inspection)
+        self.generate_vehicle_checks(inspection)
+        
+        # Build PDF with custom canvas
+        doc.build(self.story, canvasmaker=create_canvas)
+        
+        # Get PDF value
+        pdf = buffer.getvalue()
+        buffer.close()
+        
+        return pdf
+    
+    def generate_prechecklist_header(self, inspection):
+        """Generate document header for pre-checklist report"""
+        # Title
+        title = Paragraph("PRE-TRIP CHECKLIST REPORT", self.styles['CustomTitle'])
+        self.story.append(title)
+        
+        # Form details table
+        form_data = [
+            ['Form Code:', 'LMP-FSM-PTI/03', 'Version:', '1.0'],
+            ['Inspection ID:', str(inspection.inspection_id), 'Status:', inspection.get_status_display().upper()],
+        ]
+        
+        form_table = Table(form_data, colWidths=[1.5*inch, 2*inch, 1.2*inch, 1.8*inch])
+        form_table.setStyle(TableStyle([
+            ('FONT', (0, 0), (-1, -1), 'Helvetica', 9),
+            ('FONT', (0, 0), (0, -1), 'Helvetica-Bold', 9),
+            ('FONT', (2, 0), (2, -1), 'Helvetica-Bold', 9),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('TEXTCOLOR', (1, 1), (1, 1), colors.HexColor('#2c5aa0')),
+            ('FONTNAME', (1, 1), (1, 1), 'Helvetica-Bold'),
+        ]))
+        
+        self.story.append(form_table)
+        self.story.append(Spacer(1, 0.3*inch))
+    
     # Helper methods for styling
     def _get_status_display(self, status):
         """Get colored status display"""

@@ -243,6 +243,43 @@ export const rejectInspection = async (
   }
 };
 
+export const downloadPrechecklistPDF = async (id: string, inspectionId?: string): Promise<APIResponse<boolean>> => {
+  try {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      return { error: 'No authentication token found' };
+    }
+
+    const response = await fetch(`${API_URL}/inspections/${id}/download_prechecklist_pdf/`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return { error: errorData.error || 'Failed to generate pre-checklist PDF' };
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `prechecklist-${inspectionId || id}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    return { data: true };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Failed to download pre-checklist PDF',
+    };
+  }
+};
+
 export const downloadInspectionPDF = async (id: string): Promise<APIResponse<boolean>> => {
   try {
     const token = localStorage.getItem('access_token');
