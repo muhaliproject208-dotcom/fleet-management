@@ -68,6 +68,7 @@ interface InspectionFormData {
   approved_driving_hours: string;
   approved_rest_stops: number;
   
+  adequate_rest: boolean | null;
   alcohol_test_status: 'pass' | 'fail' | '';
   alcohol_test_remarks: string;
   temperature_check_status: 'pass' | 'fail' | '';
@@ -155,6 +156,7 @@ export default function NewInspectionWizard() {
     approved_driving_hours: '',
     approved_rest_stops: 0,
     
+    adequate_rest: null,
     alcohol_test_status: '',
     alcohol_test_remarks: '',
     temperature_check_status: '',
@@ -285,6 +287,7 @@ export default function NewInspectionWizard() {
             
             // Load health check data if it exists
             ...(inspection.health_fitness ? {
+              adequate_rest: inspection.health_fitness.adequate_rest,
               alcohol_test_status: inspection.health_fitness.alcohol_test_status,
               alcohol_test_remarks: inspection.health_fitness.alcohol_test_remarks || '',
               temperature_check_status: inspection.health_fitness.temperature_check_status,
@@ -407,6 +410,15 @@ export default function NewInspectionWizard() {
         }
         break;
       case 2:
+        // First check the critical rest question
+        if (formData.adequate_rest === null) {
+          setError('Please answer the rest/fatigue clearance question');
+          return false;
+        }
+        if (formData.adequate_rest === false) {
+          setError('⚠️ TRAVEL NOT PERMITTED: Driver has not rested for 8 hours or more. The driver should not travel.');
+          return false;
+        }
         if (!formData.alcohol_test_status || !formData.temperature_check_status || 
             formData.fit_for_duty === null || formData.medication_status === null || 
             formData.no_health_impairment === null || formData.fatigue_checklist_completed === null) {
@@ -519,6 +531,7 @@ export default function NewInspectionWizard() {
           
           // Load health check data if it exists
           ...(inspection.health_fitness ? {
+            adequate_rest: inspection.health_fitness.adequate_rest,
             alcohol_test_status: inspection.health_fitness.alcohol_test_status,
             alcohol_test_remarks: inspection.health_fitness.alcohol_test_remarks || '',
             temperature_check_status: inspection.health_fitness.temperature_check_status,
@@ -637,6 +650,7 @@ export default function NewInspectionWizard() {
         
         const healthData = {
           inspection: inspectionId,
+          adequate_rest: formData.adequate_rest,
           alcohol_test_status: formData.alcohol_test_status,
           alcohol_test_remarks: formData.alcohol_test_remarks,
           temperature_check_status: formData.temperature_check_status,
@@ -1158,6 +1172,102 @@ export default function NewInspectionWizard() {
         return (
           <div>
             <h2 style={{ color: '#000', marginBottom: '20px' }}>{getFormTitle()}</h2>
+            
+            {/* CRITICAL: Rest/Fatigue Clearance - Must be first and prominent */}
+            <div style={{ 
+              marginBottom: '30px', 
+              padding: '20px', 
+              backgroundColor: formData.adequate_rest === false ? '#fee2e2' : (formData.adequate_rest === true ? '#dcfce7' : '#fef3c7'),
+              borderRadius: '8px',
+              border: formData.adequate_rest === false ? '2px solid #ef4444' : (formData.adequate_rest === true ? '2px solid #22c55e' : '2px solid #f59e0b')
+            }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '10px', 
+                marginBottom: '15px' 
+              }}>
+                <span style={{ fontSize: '24px' }}>⚠️</span>
+                <label style={{ 
+                  display: 'block', 
+                  fontWeight: '700', 
+                  color: '#000', 
+                  fontSize: '16px' 
+                }}>
+                  FATIGUE CLEARANCE - CRITICAL *
+                </label>
+              </div>
+              <p style={{ 
+                color: '#374151', 
+                marginBottom: '15px', 
+                fontSize: '15px',
+                fontWeight: '500'
+              }}>
+                Has the driver rested for 8 hours or more?
+              </p>
+              <div style={{ display: 'flex', gap: '20px', marginBottom: '10px' }}>
+                <RadioOption
+                  label="Yes - Driver has rested 8+ hours"
+                  value="yes"
+                  selected={formData.adequate_rest === true}
+                  onChange={() => setFormData({ ...formData, adequate_rest: true })}
+                />
+                <RadioOption
+                  label="No - Driver has NOT rested 8+ hours"
+                  value="no"
+                  selected={formData.adequate_rest === false}
+                  onChange={() => setFormData({ ...formData, adequate_rest: false })}
+                />
+              </div>
+              
+              {/* Warning message when No is selected */}
+              {formData.adequate_rest === false && (
+                <div style={{
+                  marginTop: '15px',
+                  padding: '15px',
+                  backgroundColor: '#fecaca',
+                  borderRadius: '6px',
+                  border: '1px solid #ef4444'
+                }}>
+                  <p style={{ 
+                    color: '#991b1b', 
+                    fontWeight: '700', 
+                    margin: 0,
+                    fontSize: '14px'
+                  }}>
+                    ⛔ TRAVEL NOT PERMITTED
+                  </p>
+                  <p style={{ 
+                    color: '#991b1b', 
+                    margin: '8px 0 0 0',
+                    fontSize: '13px'
+                  }}>
+                    The driver has not had adequate rest (8 hours or more) and should NOT travel. 
+                    Please ensure the driver rests sufficiently before attempting the trip.
+                  </p>
+                </div>
+              )}
+              
+              {/* Cleared message when Yes is selected */}
+              {formData.adequate_rest === true && (
+                <div style={{
+                  marginTop: '15px',
+                  padding: '12px',
+                  backgroundColor: '#bbf7d0',
+                  borderRadius: '6px',
+                  border: '1px solid #22c55e'
+                }}>
+                  <p style={{ 
+                    color: '#166534', 
+                    fontWeight: '600', 
+                    margin: 0,
+                    fontSize: '13px'
+                  }}>
+                    ✓ Driver has confirmed adequate rest - Fatigue clearance granted
+                  </p>
+                </div>
+              )}
+            </div>
             
             <div style={{ marginBottom: '25px' }}>
               <label style={{ display: 'block', fontWeight: '600', color: '#000', marginBottom: '10px' }}>

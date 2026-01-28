@@ -34,6 +34,7 @@ from .models import (
     SupervisorRemarks,
     EvaluationSummary,
     InspectionSignOff,
+    PreTripScoreSummary,
 )
 
 
@@ -169,7 +170,7 @@ class InspectionPDFGenerator:
         self.story.append(Spacer(1, 0.2*inch))
     
     def generate_health_fitness(self, inspection):
-        """Section 2: Health & Fitness Check"""
+        """Section 2: Health & Fitness Check with Scoring"""
         try:
             health_fitness = HealthFitnessCheck.objects.get(inspection=inspection)
         except HealthFitnessCheck.DoesNotExist:
@@ -178,7 +179,102 @@ class InspectionPDFGenerator:
         section = Paragraph("2. HEALTH & FITNESS CHECK", self.styles['SectionHeader'])
         self.story.append(section)
         
+        # Get score information
+        earned, max_score, percentage = health_fitness.calculate_score()
+        is_cleared = health_fitness.is_travel_cleared()
+        clearance_msg = health_fitness.get_clearance_message()
+        
+        # Clearance Status Banner
+        if is_cleared:
+            clearance_style = TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#90EE90')),
+                ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#006400')),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 11),
+                ('TOPPADDING', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ])
+        else:
+            clearance_style = TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#FF6B6B')),
+                ('TEXTCOLOR', (0, 0), (-1, -1), colors.white),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 11),
+                ('TOPPADDING', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ])
+        
+        clearance_table = Table([[clearance_msg]], colWidths=[6.5*inch])
+        clearance_table.setStyle(clearance_style)
+        self.story.append(clearance_table)
+        self.story.append(Spacer(1, 0.15*inch))
+        
+        # Score Summary Box
+        score_color = colors.HexColor('#90EE90') if percentage >= 80 else (colors.HexColor('#FFD700') if percentage >= 60 else colors.HexColor('#FF6B6B'))
+        score_data = [
+            ['HEALTH & FITNESS SCORE', f'{earned} / {max_score} points ({percentage}%)']
+        ]
+        score_table = Table(score_data, colWidths=[3*inch, 3.5*inch])
+        score_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, 0), colors.HexColor('#2c5aa0')),
+            ('BACKGROUND', (1, 0), (1, 0), score_color),
+            ('TEXTCOLOR', (0, 0), (0, 0), colors.white),
+            ('TEXTCOLOR', (1, 0), (1, 0), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        self.story.append(score_table)
+        self.story.append(Spacer(1, 0.15*inch))
+        
+        # Detailed Score Breakdown with weights
+        score_breakdown = health_fitness.get_score_breakdown()
+        breakdown_data = [['Check Item', 'Weight', 'Earned', 'Status', 'Critical']]
+        for item in score_breakdown:
+            status_display = item['status']
+            critical_marker = '⚠️' if item['critical'] else ''
+            breakdown_data.append([
+                item['item'],
+                str(item['weight']),
+                str(item['earned']),
+                status_display,
+                critical_marker
+            ])
+        
+        breakdown_table = Table(breakdown_data, colWidths=[2.5*inch, 0.8*inch, 0.8*inch, 1.5*inch, 0.7*inch])
+        breakdown_style = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c5aa0')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (2, -1), 'CENTER'),
+            ('ALIGN', (4, 0), (4, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ])
+        
+        # Color code earned column based on whether points were earned
+        for i, item in enumerate(score_breakdown, 1):
+            if item['earned'] == item['weight']:
+                breakdown_style.add('BACKGROUND', (2, i), (2, i), colors.HexColor('#90EE90'))
+            elif item['earned'] == 0 and item['critical']:
+                breakdown_style.add('BACKGROUND', (2, i), (2, i), colors.HexColor('#FF6B6B'))
+            elif item['earned'] == 0:
+                breakdown_style.add('BACKGROUND', (2, i), (2, i), colors.HexColor('#FFD700'))
+        
+        breakdown_table.setStyle(breakdown_style)
+        self.story.append(breakdown_table)
+        self.story.append(Spacer(1, 0.15*inch))
+        
+        # Original detailed data
         data = [
+            ['Adequate Rest (8+ hours):', 'Yes' if health_fitness.adequate_rest else 'No'],
             ['Alcohol Test:', self._get_status_display(health_fitness.alcohol_test_status)],
             ['Temperature Check:', self._get_status_display(health_fitness.temperature_check_status)],
             ['Temperature Value:', f"{health_fitness.temperature_value}°C" if health_fitness.temperature_value else 'N/A'],
@@ -640,6 +736,111 @@ class InspectionPDFGenerator:
         self.story.append(table)
         self.story.append(Spacer(1, 0.3*inch))
     
+    def generate_pre_trip_score_summary(self, inspection):
+        """Generate Pre-Trip Score Summary Section"""
+        # Try to get or create score summary
+        try:
+            score_summary = PreTripScoreSummary.objects.get(inspection=inspection)
+        except PreTripScoreSummary.DoesNotExist:
+            # Create and calculate score summary
+            score_summary = PreTripScoreSummary(inspection=inspection)
+            score_summary.save()
+        
+        section = Paragraph("PRE-TRIP CHECKLIST SCORE SUMMARY", self.styles['SectionHeader'])
+        self.story.append(section)
+        
+        # Overall Score Box
+        score_color = colors.HexColor('#90EE90') if float(score_summary.score_percentage) >= 80 else (
+            colors.HexColor('#FFD700') if float(score_summary.score_percentage) >= 60 else colors.HexColor('#FF6B6B')
+        )
+        
+        overall_data = [
+            ['OVERALL PRE-TRIP SCORE', f'{score_summary.total_score} / {score_summary.max_possible_score} ({score_summary.score_percentage}%)'],
+            ['SCORE LEVEL', score_summary.get_score_level_display()],
+            ['TRAVEL CLEARANCE', 'CLEARED ✓' if score_summary.is_cleared_for_travel else 'NOT CLEARED ⚠'],
+        ]
+        
+        overall_table = Table(overall_data, colWidths=[3*inch, 3.5*inch])
+        overall_style = TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#2c5aa0')),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.white),
+            ('BACKGROUND', (1, 0), (1, 0), score_color),
+            ('BACKGROUND', (1, 1), (1, 1), colors.HexColor('#f0f0f0')),
+            ('BACKGROUND', (1, 2), (1, 2), colors.HexColor('#90EE90') if score_summary.is_cleared_for_travel else colors.HexColor('#FF6B6B')),
+            ('TEXTCOLOR', (1, 2), (1, 2), colors.HexColor('#166534') if score_summary.is_cleared_for_travel else colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ])
+        overall_table.setStyle(overall_style)
+        self.story.append(overall_table)
+        self.story.append(Spacer(1, 0.15*inch))
+        
+        # Section Breakdown
+        section_summary = score_summary.get_section_summary()
+        breakdown_data = [['Section', 'Score', 'Max', 'Percentage']]
+        for section in section_summary:
+            pct = section['percentage']
+            breakdown_data.append([
+                section['section'],
+                str(section['score']),
+                str(section['max']),
+                f"{pct}%"
+            ])
+        
+        breakdown_table = Table(breakdown_data, colWidths=[2.5*inch, 1.2*inch, 1.2*inch, 1.6*inch])
+        breakdown_style = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c5aa0')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (3, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+        ])
+        
+        # Color code percentage column
+        for i, section in enumerate(section_summary, 1):
+            pct = section['percentage']
+            if pct >= 80:
+                breakdown_style.add('BACKGROUND', (3, i), (3, i), colors.HexColor('#90EE90'))
+            elif pct >= 60:
+                breakdown_style.add('BACKGROUND', (3, i), (3, i), colors.HexColor('#FFD700'))
+            else:
+                breakdown_style.add('BACKGROUND', (3, i), (3, i), colors.HexColor('#FF6B6B'))
+        
+        breakdown_table.setStyle(breakdown_style)
+        self.story.append(breakdown_table)
+        self.story.append(Spacer(1, 0.15*inch))
+        
+        # Critical Failures (if any)
+        if score_summary.has_critical_failures:
+            failures_title = Paragraph(
+                '<font color="red"><b>⚠ CRITICAL FAILURES</b></font>',
+                self.styles['Normal']
+            )
+            self.story.append(failures_title)
+            self.story.append(Spacer(1, 0.05*inch))
+            
+            for failure in score_summary.critical_failures:
+                failure_item = Paragraph(f'• {failure}', self.styles['Normal'])
+                self.story.append(failure_item)
+            
+            self.story.append(Spacer(1, 0.1*inch))
+        
+        # Clearance Notes
+        if score_summary.clearance_notes:
+            notes = Paragraph(
+                f'<b>Clearance Notes:</b> {score_summary.clearance_notes}',
+                self.styles['Normal']
+            )
+            self.story.append(notes)
+        
+        self.story.append(Spacer(1, 0.2*inch))
+    
     def generate_full_report(self, inspection_id):
         """Generate complete PDF report for an inspection"""
         try:
@@ -680,6 +881,7 @@ class InspectionPDFGenerator:
         self.generate_health_fitness(inspection)
         self.generate_documentation(inspection)
         self.generate_vehicle_checks(inspection)
+        self.generate_pre_trip_score_summary(inspection)  # Add score summary after pre-trip sections
         self.generate_trip_behaviors(inspection)
         self.generate_driving_behaviors(inspection)
         self.generate_post_trip(inspection)
@@ -734,13 +936,14 @@ class InspectionPDFGenerator:
             bottomMargin=0.75*inch
         )
         
-        # Build story - Pre-Checklist sections only (1-8)
+        # Build story - Pre-Checklist sections only (1-8) with scores
         self.story = []
         self.generate_prechecklist_header(inspection)
         self.generate_driver_trip_info(inspection)
         self.generate_health_fitness(inspection)
         self.generate_documentation(inspection)
         self.generate_vehicle_checks(inspection)
+        self.generate_pre_trip_score_summary(inspection)  # Add score summary
         
         # Build PDF with custom canvas
         doc.build(self.story, canvasmaker=create_canvas)

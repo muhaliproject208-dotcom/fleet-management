@@ -168,6 +168,7 @@ export interface PreTripInspectionFull extends PreTripInspection {
   supervisor_remarks?: SupervisorRemarks | null;
   post_trip?: PostTripReport | null;
   risk_score?: RiskScoreSummary | null;
+  pre_trip_score?: PreTripScoreSummary | null;
   evaluation?: EvaluationSummary | null;
   
   // Vehicle checks (ForeignKey many)
@@ -211,9 +212,21 @@ export type UpdateInspectionData = Partial<CreateInspectionData>;
 
 // Health & Fitness Check
 
+export interface HealthFitnessScoreBreakdown {
+  item: string;
+  weight: number;
+  earned: number;
+  status: string;
+  critical: boolean;
+}
+
 export interface HealthFitnessCheck extends BaseModel {
   inspection: string;
 
+  // Fatigue / Rest Clearance - CRITICAL
+  adequate_rest: boolean | null;
+  rest_clearance_status: 'cleared' | 'not_cleared' | '';
+  
   // Checks
   alcohol_test_status: HealthCheckStatus;
   alcohol_test_remarks?: string;
@@ -229,10 +242,21 @@ export interface HealthFitnessCheck extends BaseModel {
   // Fatigue
   fatigue_checklist_completed: boolean;
   fatigue_remarks?: string;
+  
+  // Scoring
+  section_score?: number;
+  max_possible_score?: number;
+  score_earned?: number;
+  score_max?: number;
+  score_percentage?: number;
+  is_travel_cleared?: boolean;
+  clearance_message?: string;
+  score_breakdown?: HealthFitnessScoreBreakdown[];
 }
 
 export interface CreateHealthFitnessData {
   inspection: string;
+  adequate_rest: boolean | null;
   alcohol_test_status: HealthCheckStatus;
   alcohol_test_remarks?: string;
   temperature_check_status: HealthCheckStatus;
@@ -301,4 +325,55 @@ export interface PaginatedResponse<T> {
 export interface APIResponse<T> {
   data?: T;
   error?: string;
+}
+
+// Pre-Trip Score Summary
+
+export interface SectionScoreSummary {
+  section: string;
+  score: number;
+  max: number;
+  percentage: number;
+}
+
+export interface PreTripScoreSummary {
+  id: string;
+  inspection: string;
+  
+  // Section scores
+  health_fitness_score: number;
+  health_fitness_max: number;
+  documentation_score: number;
+  documentation_max: number;
+  vehicle_exterior_score: number;
+  vehicle_exterior_max: number;
+  engine_fluid_score: number;
+  engine_fluid_max: number;
+  interior_cabin_score: number;
+  interior_cabin_max: number;
+  functional_score: number;
+  functional_max: number;
+  safety_equipment_score: number;
+  safety_equipment_max: number;
+  
+  // Overall scores
+  total_score: number;
+  max_possible_score: number;
+  score_percentage: number;
+  score_level: 'excellent' | 'good' | 'fair' | 'poor';
+  score_level_display?: string;
+  
+  // Critical failures
+  critical_failures: string[];
+  has_critical_failures: boolean;
+  
+  // Travel clearance
+  is_cleared_for_travel: boolean;
+  clearance_notes: string;
+  
+  // Computed
+  section_summary?: SectionScoreSummary[];
+  
+  created_at: string;
+  updated_at: string;
 }

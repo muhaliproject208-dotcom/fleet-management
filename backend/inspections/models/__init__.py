@@ -1,5 +1,5 @@
 from .base import InspectionStatus, PreTripInspection
-from .health_fitness import HealthCheckStatus, HealthFitnessCheck
+from .health_fitness import HealthCheckStatus, HealthFitnessCheck, HEALTH_FITNESS_SCORES
 from .documentation import DocumentStatus, DocumentationCompliance
 from .vehicle_checks import (
     CheckStatus,
@@ -35,12 +35,19 @@ from .signoff import (
     InspectionSignOff,
 )
 from .audit import AuditLog, AuditAction
+from .scoring import (
+    ScoreLevel,
+    PreTripScoreSummary,
+    DOCUMENTATION_SCORES,
+    VEHICLE_CHECK_SCORES,
+)
 
 __all__ = [
     'InspectionStatus',
     'PreTripInspection',
     'HealthCheckStatus',
     'HealthFitnessCheck',
+    'HEALTH_FITNESS_SCORES',
     'DocumentStatus',
     'DocumentationCompliance',
     'CheckStatus',
@@ -66,4 +73,8 @@ __all__ = [
     'InspectionSignOff',
     'AuditLog',
     'AuditAction',
+    'ScoreLevel',
+    'PreTripScoreSummary',
+    'DOCUMENTATION_SCORES',
+    'VEHICLE_CHECK_SCORES',
 ]
