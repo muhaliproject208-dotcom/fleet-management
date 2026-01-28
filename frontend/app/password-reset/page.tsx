@@ -4,6 +4,7 @@ import { useState, FormEvent, useRef, KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { requestPasswordReset, verifyPasswordResetOTP, confirmPasswordReset } from '@/lib/api/auth';
+import { getFieldErrorMessage } from '@/lib/utils/errorMessages';
 
 export default function PasswordResetPage() {
   const router = useRouter();
@@ -14,20 +15,36 @@ export default function PasswordResetPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [resetToken, setResetToken] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  const clearFieldError = (field: string) => {
+    if (fieldErrors[field]) {
+      const newErrors = { ...fieldErrors };
+      delete newErrors[field];
+      setFieldErrors(newErrors);
+    }
+  };
+
   const handleRequestReset = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
     setSuccess('');
     setLoading(true);
 
-    if (!email) {
-      setError('Please enter your email address');
+    if (!email.trim()) {
+      setFieldErrors({ email: getFieldErrorMessage('email', 'required') });
+      setLoading(false);
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setFieldErrors({ email: getFieldErrorMessage('email', 'format') });
       setLoading(false);
       return;
     }
@@ -38,7 +55,7 @@ export default function PasswordResetPage() {
       setError(response.error);
       setLoading(false);
     } else {
-      setSuccess('Reset code sent to your email!');
+      setSuccess('A password reset code has been sent to your email.');
       setTimeout(() => {
         setStep('verify');
         setSuccess('');
@@ -75,7 +92,7 @@ export default function PasswordResetPage() {
     const otpCode = otp.join('');
 
     if (otpCode.length !== 8) {
-      setError('Please enter the complete 8-digit code');
+      setError(getFieldErrorMessage('otp', 'incomplete'));
       setLoading(false);
       return;
     }
@@ -86,7 +103,7 @@ export default function PasswordResetPage() {
       setError(response.error);
       setLoading(false);
     } else {
-      setSuccess('Code verified!');
+      setSuccess('Code verified successfully!');
       setResetToken(response.data?.access_token || '');
       setTimeout(() => {
         setStep('reset');
@@ -99,17 +116,26 @@ export default function PasswordResetPage() {
   const handleResetPassword = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
     setSuccess('');
     setLoading(true);
 
-    if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters');
-      setLoading(false);
-      return;
+    const errors: Record<string, string> = {};
+
+    if (!newPassword) {
+      errors.newPassword = getFieldErrorMessage('password', 'required');
+    } else if (newPassword.length < 8) {
+      errors.newPassword = 'Password must be at least 8 characters long.';
     }
 
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+    if (!confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password.';
+    } else if (newPassword !== confirmPassword) {
+      errors.confirmPassword = getFieldErrorMessage('password', 'mismatch');
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       setLoading(false);
       return;
     }
@@ -120,7 +146,7 @@ export default function PasswordResetPage() {
       setError(response.error);
       setLoading(false);
     } else {
-      setSuccess('Password reset successful!');
+      setSuccess('Your password has been reset successfully! Redirecting to login...');
       setTimeout(() => {
         router.push('/login');
       }, 1500);
@@ -135,7 +161,7 @@ export default function PasswordResetPage() {
             <h1>Reset Password</h1>
             <p>Enter your email to receive a password reset code</p>
 
-            {error && <div className="alert alert-error">{error}</div>}
+            {error && !fieldErrors.email && <div className="alert alert-error">{error}</div>}
             {success && <div className="alert alert-success">{success}</div>}
 
             <form onSubmit={handleRequestReset}>
@@ -146,9 +172,16 @@ export default function PasswordResetPage() {
                   id="email"
                   placeholder="you@company.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    clearFieldError('email');
+                  }}
+                  className={fieldErrors.email ? 'input-error' : ''}
                   required
                 />
+                {fieldErrors.email && (
+                  <span className="field-error">{fieldErrors.email}</span>
+                )}
               </div>
 
               <button type="submit" disabled={loading}>
@@ -237,7 +270,7 @@ export default function PasswordResetPage() {
             <h1>Set New Password</h1>
             <p>Enter your new password below</p>
 
-            {error && <div className="alert alert-error">{error}</div>}
+            {error && !Object.keys(fieldErrors).length && <div className="alert alert-error">{error}</div>}
             {success && <div className="alert alert-success">{success}</div>}
 
             <form onSubmit={handleResetPassword}>
@@ -248,9 +281,16 @@ export default function PasswordResetPage() {
                   id="new_password"
                   placeholder="Min. 8 characters with uppercase, number & special char"
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    clearFieldError('newPassword');
+                  }}
+                  className={fieldErrors.newPassword ? 'input-error' : ''}
                   required
                 />
+                {fieldErrors.newPassword && (
+                  <span className="field-error">{fieldErrors.newPassword}</span>
+                )}
                 <button
                   type="button"
                   className="password-toggle"
@@ -275,9 +315,16 @@ export default function PasswordResetPage() {
                   id="confirm_password"
                   placeholder="Re-enter your new password"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    clearFieldError('confirmPassword');
+                  }}
+                  className={fieldErrors.confirmPassword ? 'input-error' : ''}
                   required
                 />
+                {fieldErrors.confirmPassword && (
+                  <span className="field-error">{fieldErrors.confirmPassword}</span>
+                )}
                 <button
                   type="button"
                   className="password-toggle"

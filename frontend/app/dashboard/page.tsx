@@ -6,6 +6,7 @@ import { getProfile, logout, getCurrentUser, isAuthenticated, User } from '@/lib
 import { getDrivers, Driver } from '@/lib/api/drivers';
 import { getVehicles, Vehicle } from '@/lib/api/vehicles';
 import { getMechanics, Mechanic } from '@/lib/api/mechanics';
+import { getFriendlyErrorMessage } from '@/lib/utils/errorMessages';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -36,7 +37,7 @@ export default function DashboardPage() {
       const response = await getProfile();
 
       if (response.error) {
-        setError(response.error);
+        setError(getFriendlyErrorMessage(response.error));
         // If token expired, redirect to login
         if (response.error.includes('token') || response.error.includes('auth')) {
           await logout();

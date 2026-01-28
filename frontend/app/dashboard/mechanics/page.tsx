@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/api/auth';
 import { getMechanics, createMechanic, updateMechanic, Mechanic, CreateMechanicData } from '@/lib/api/mechanics';
+import { getFriendlyErrorMessage } from '@/lib/utils/errorMessages';
 
 export default function MechanicsPage() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function MechanicsPage() {
     const response = await getMechanics({ is_active: 'all' });
 
     if (response.error) {
-      setError(response.error);
+      setError(getFriendlyErrorMessage(response.error));
     } else if (response.data) {
       setMechanics(response.data.results || []);
     }
@@ -88,7 +89,7 @@ export default function MechanicsPage() {
       : await createMechanic(formData);
 
     if (response.error) {
-      setError(response.error);
+      setError(getFriendlyErrorMessage(response.error));
       setSubmitting(false);
     } else if (response.data) {
       setSuccessMessage(editingMechanic ? 'Mechanic updated successfully' : 'Mechanic created successfully');

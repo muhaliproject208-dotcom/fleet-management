@@ -6,6 +6,7 @@ import { isAuthenticated, getCurrentUser } from '@/lib/api/auth';
 import { getInspection, approveInspection, rejectInspection, downloadPrechecklistPDF } from '@/lib/api/inspections';
 import { PreTripInspectionFull, InspectionStatus } from '@/lib/api/inspections/types';
 import InspectionStatusBadge from '../components/InspectionStatusBadge';
+import { getFriendlyErrorMessage } from '@/lib/utils/errorMessages';
 
 export default function InspectionDetailPage() {
   const router = useRouter();
@@ -42,7 +43,7 @@ export default function InspectionDetailPage() {
       const response = await getInspection(id);
 
       if (response.error) {
-        setError(response.error);
+        setError(getFriendlyErrorMessage(response.error));
       } else if (response.data) {
         setInspection(response.data);
       }
@@ -73,7 +74,7 @@ export default function InspectionDetailPage() {
     const response = await approveInspection(inspection.id);
     
     if (response.error) {
-      setError(response.error);
+      setError(getFriendlyErrorMessage(response.error));
     } else {
       setSuccess('Inspection approved successfully!');
       // Refresh inspection data
@@ -98,7 +99,7 @@ export default function InspectionDetailPage() {
     const response = await rejectInspection(inspection.id, rejectReason);
     
     if (response.error) {
-      setError(response.error);
+      setError(getFriendlyErrorMessage(response.error));
     } else {
       setSuccess('Inspection rejected.');
       setShowRejectModal(false);
@@ -127,7 +128,7 @@ export default function InspectionDetailPage() {
       if (response.requires_approval) {
         setShowApprovalRequiredModal(true);
       } else {
-        setError(response.error);
+        setError(getFriendlyErrorMessage(response.error));
       }
     } else {
       setSuccess('Pre-checklist PDF downloaded successfully!');

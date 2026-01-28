@@ -4,6 +4,7 @@ import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { register } from '@/lib/api/auth';
+import { getFieldErrorMessage } from '@/lib/utils/errorMessages';
 
 interface PasswordStrength {
   hasMinLength: boolean;
@@ -24,6 +25,7 @@ export default function RegisterPage() {
     role: 'fleet_manager' as 'fleet_manager' | 'transport_supervisor',
   });
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState<PasswordStrength>({
@@ -53,20 +55,52 @@ export default function RegisterPage() {
     return Object.values(passwordStrength).every(Boolean);
   };
 
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    if (!formData.email.trim()) {
+      errors.email = getFieldErrorMessage('email', 'required');
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = getFieldErrorMessage('email', 'format');
+    }
+    
+    if (!formData.password) {
+      errors.password = getFieldErrorMessage('password', 'required');
+    } else if (!isPasswordValid()) {
+      errors.password = getFieldErrorMessage('password', 'weak');
+    }
+    
+    if (!formData.first_name.trim()) {
+      errors.first_name = getFieldErrorMessage('first_name', 'required');
+    }
+    
+    if (!formData.last_name.trim()) {
+      errors.last_name = getFieldErrorMessage('last_name', 'required');
+    }
+    
+    if (formData.phone_number && !/^\+?[0-9]{10,15}$/.test(formData.phone_number.replace(/\s/g, ''))) {
+      errors.phone_number = getFieldErrorMessage('phone_number', 'format');
+    }
+    
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const clearFieldError = (field: string) => {
+    if (fieldErrors[field]) {
+      const newErrors = { ...fieldErrors };
+      delete newErrors[field];
+      setFieldErrors(newErrors);
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
     setLoading(true);
 
-    // Validation
-    if (!formData.email || !formData.password || !formData.first_name || !formData.last_name) {
-      setError('Please fill in all required fields');
-      setLoading(false);
-      return;
-    }
-
-    if (!isPasswordValid()) {
-      setError('Password does not meet all requirements');
+    if (!validateForm()) {
       setLoading(false);
       return;
     }
@@ -74,6 +108,9 @@ export default function RegisterPage() {
     const response = await register(formData);
 
     if (response.error) {
+      if (response.fieldErrors) {
+        setFieldErrors(response.fieldErrors);
+      }
       setError(response.error);
       setLoading(false);
     } else {
@@ -89,7 +126,9 @@ export default function RegisterPage() {
         <h1>Create Account</h1>
         <p>Join our fleet management system</p>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && !Object.keys(fieldErrors).length && (
+          <div className="alert alert-error">{error}</div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -99,9 +138,16 @@ export default function RegisterPage() {
               id="email"
               placeholder="you@company.com"
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, email: e.target.value });
+                clearFieldError('email');
+              }}
+              className={fieldErrors.email ? 'input-error' : ''}
               required
             />
+            {fieldErrors.email && (
+              <span className="field-error">{fieldErrors.email}</span>
+            )}
           </div>
 
           <div className="form-group">
@@ -111,9 +157,16 @@ export default function RegisterPage() {
               id="password"
               placeholder="Min. 8 characters with uppercase, number & special char"
               value={formData.password}
-              onChange={(e) => handlePasswordChange(e.target.value)}
+              onChange={(e) => {
+                handlePasswordChange(e.target.value);
+                clearFieldError('password');
+              }}
+              className={fieldErrors.password ? 'input-error' : ''}
               required
             />
+            {fieldErrors.password && (
+              <span className="field-error">{fieldErrors.password}</span>
+            )}
             <button
               type="button"
               className="password-toggle"
@@ -157,9 +210,16 @@ export default function RegisterPage() {
               id="first_name"
               placeholder="John"
               value={formData.first_name}
-              onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, first_name: e.target.value });
+                clearFieldError('first_name');
+              }}
+              className={fieldErrors.first_name ? 'input-error' : ''}
               required
             />
+            {fieldErrors.first_name && (
+              <span className="field-error">{fieldErrors.first_name}</span>
+            )}
           </div>
 
           <div className="form-group">
@@ -169,9 +229,16 @@ export default function RegisterPage() {
               id="last_name"
               placeholder="Doe"
               value={formData.last_name}
-              onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, last_name: e.target.value });
+                clearFieldError('last_name');
+              }}
+              className={fieldErrors.last_name ? 'input-error' : ''}
               required
             />
+            {fieldErrors.last_name && (
+              <span className="field-error">{fieldErrors.last_name}</span>
+            )}
           </div>
 
           <div className="form-group">
@@ -179,10 +246,17 @@ export default function RegisterPage() {
             <input
               type="tel"
               id="phone_number"
-              placeholder="+1234567890"
+              placeholder="+260XXXXXXXXX"
               value={formData.phone_number}
-              onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, phone_number: e.target.value });
+                clearFieldError('phone_number');
+              }}
+              className={fieldErrors.phone_number ? 'input-error' : ''}
             />
+            {fieldErrors.phone_number && (
+              <span className="field-error">{fieldErrors.phone_number}</span>
+            )}
           </div>
 
           <div className="form-group">

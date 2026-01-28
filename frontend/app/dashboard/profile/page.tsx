@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getProfile, getCurrentUser, isAuthenticated, User, logout } from '@/lib/api/auth';
+import { getFriendlyErrorMessage } from '@/lib/utils/errorMessages';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -34,7 +35,7 @@ export default function ProfilePage() {
       const response = await getProfile();
 
       if (response.error) {
-        setError(response.error);
+        setError(getFriendlyErrorMessage(response.error));
         if (response.error.includes('token') || response.error.includes('auth')) {
           await logout();
           router.push('/login');
@@ -84,7 +85,8 @@ export default function ProfilePage() {
       setSuccessMessage('Profile updated successfully');
       setIsEditing(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update profile';
+      setError(getFriendlyErrorMessage(errorMessage));
     } finally {
       setSaving(false);
     }

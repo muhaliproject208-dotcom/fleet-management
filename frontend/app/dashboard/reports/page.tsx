@@ -7,6 +7,7 @@ import { getInspections } from '@/lib/api/inspections';
 import { API_URL } from '@/lib/api';
 import { PreTripInspection, InspectionStatus } from '@/lib/api/inspections/types';
 import InspectionStatusBadge from '../inspections/components/InspectionStatusBadge';
+import { getFriendlyErrorMessage } from '@/lib/utils/errorMessages';
 
 interface ReportWithScores extends PreTripInspection {
   evaluation?: {
@@ -47,7 +48,7 @@ export default function ReportsPage() {
     const response = await getInspections(params);
 
     if (response.error) {
-      setError(response.error);
+      setError(getFriendlyErrorMessage(response.error));
     } else if (response.data) {
       // For now, use the inspection data - evaluation scores would come from the API
       setReports(response.data.results || []);
@@ -113,7 +114,8 @@ export default function ReportsPage() {
       document.body.removeChild(a);
     } catch (err) {
       console.error('Error downloading PDF:', err);
-      alert('Failed to download PDF. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to download PDF';
+      setError(getFriendlyErrorMessage(errorMessage));
     } finally {
       setDownloadingId(null);
     }

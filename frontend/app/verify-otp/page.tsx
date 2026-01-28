@@ -3,6 +3,7 @@
 import { useState, FormEvent, useRef, KeyboardEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { verifyOTP, resendOTP } from '@/lib/api/auth';
+import { getFieldErrorMessage } from '@/lib/utils/errorMessages';
 
 export default function VerifyOTPPage() {
   const router = useRouter();
@@ -58,7 +59,7 @@ export default function VerifyOTPPage() {
     const otpCode = otp.join('');
 
     if (otpCode.length !== 8) {
-      setError('Please enter the complete 8-digit code');
+      setError(getFieldErrorMessage('otp', 'incomplete'));
       setLoading(false);
       return;
     }
@@ -69,7 +70,7 @@ export default function VerifyOTPPage() {
       setError(response.error);
       setLoading(false);
     } else {
-      setSuccess('Email verified successfully!');
+      setSuccess('Email verified successfully! Redirecting to login...');
       localStorage.removeItem('verification_email');
       setTimeout(() => {
         router.push('/login');
@@ -87,7 +88,10 @@ export default function VerifyOTPPage() {
     if (response.error) {
       setError(response.error);
     } else {
-      setSuccess('New code sent to your email!');
+      setSuccess('A new verification code has been sent to your email.');
+      // Clear the OTP inputs
+      setOtp(['', '', '', '', '', '', '', '']);
+      inputRefs.current[0]?.focus();
     }
     setResending(false);
   };

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/api/auth';
 import { getVehicles, createVehicle, updateVehicle, Vehicle, CreateVehicleData } from '@/lib/api/vehicles';
 import { getDrivers, Driver } from '@/lib/api/drivers';
+import { getFriendlyErrorMessage } from '@/lib/utils/errorMessages';
 
 export default function VehiclesPage() {
   const router = useRouter();
@@ -33,7 +34,7 @@ export default function VehiclesPage() {
     const response = await getVehicles({ is_active: 'all' });
 
     if (response.error) {
-      setError(response.error);
+      setError(getFriendlyErrorMessage(response.error));
     } else if (response.data) {
       setVehicles(response.data.results || []);
     }
@@ -98,7 +99,7 @@ export default function VehiclesPage() {
       : await createVehicle(formData);
 
     if (response.error) {
-      setError(response.error);
+      setError(getFriendlyErrorMessage(response.error));
       setSubmitting(false);
     } else if (response.data) {
       setSuccessMessage(editingVehicle ? 'Vehicle updated successfully' : 'Vehicle created successfully');

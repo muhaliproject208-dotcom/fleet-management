@@ -6,6 +6,7 @@ import { isAuthenticated } from '@/lib/api/auth';
 import { getInspections } from '@/lib/api/inspections';
 import { PreTripInspection, InspectionStatus } from '@/lib/api/inspections/types';
 import InspectionStatusBadge from './components/InspectionStatusBadge';
+import { getFriendlyErrorMessage } from '@/lib/utils/errorMessages';
 
 export default function InspectionsPage() {
   const router = useRouter();
@@ -37,7 +38,7 @@ export default function InspectionsPage() {
     const response = await getInspections(params);
 
     if (response.error) {
-      setError(response.error);
+      setError(getFriendlyErrorMessage(response.error));
     } else if (response.data) {
       setInspections(response.data.results || []);
       setTotalCount(response.data.count || 0);

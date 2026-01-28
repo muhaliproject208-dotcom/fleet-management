@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getProfile, getCurrentUser, isAuthenticated, User, logout } from '@/lib/api/auth';
+import { getFriendlyErrorMessage } from '@/lib/utils/errorMessages';
 
 export default function AccountSettingsPage() {
   const router = useRouter();
@@ -37,7 +38,7 @@ export default function AccountSettingsPage() {
       const response = await getProfile();
 
       if (response.error) {
-        setError(response.error);
+        setError(getFriendlyErrorMessage(response.error));
         if (response.error.includes('token') || response.error.includes('auth')) {
           await logout();
           router.push('/login');
@@ -85,7 +86,8 @@ export default function AccountSettingsPage() {
       localStorage.setItem('user', JSON.stringify(data));
       setSuccessMessage('Email and phone updated successfully');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update account');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update account';
+      setError(getFriendlyErrorMessage(errorMessage));
     } finally {
       setSavingEmail(false);
     }
@@ -134,7 +136,8 @@ export default function AccountSettingsPage() {
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to change password');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to change password';
+      setError(getFriendlyErrorMessage(errorMessage));
     } finally {
       setSavingPassword(false);
     }

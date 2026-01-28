@@ -11,6 +11,7 @@ import { API_URL } from '@/lib/api';
 import type { VehicleCheck } from '@/lib/api/inspections/types';
 import ProgressTracker from '../components/ProgressTracker';
 import { RadioOption, CheckItem } from '../components/FormComponents';
+import { getFriendlyErrorMessage } from '@/lib/utils/errorMessages';
 
 // Mapping from display labels to backend-valid enum keys
 const EXTERIOR_CHECK_MAP: Record<string, string> = {
@@ -266,7 +267,7 @@ export default function NewInspectionWizard() {
         
         if (response.error) {
           console.error('Failed to load inspection:', response.error);
-          setError(`Failed to load inspection: ${response.error}`);
+          setError(getFriendlyErrorMessage(response.error));
           setInitialLoading(false);
           return;
         }
@@ -501,7 +502,8 @@ export default function NewInspectionWizard() {
       setCurrentStep(prev => Math.min(prev + 1, TOTAL_STEPS));
       window.scrollTo(0, 0);
     } catch (err) {
-      setError(`Failed to save data: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(getFriendlyErrorMessage(errorMessage));
     } finally {
       setLoading(false);
     }
@@ -1054,7 +1056,8 @@ export default function NewInspectionWizard() {
         router.push('/dashboard/inspections');
       }, 2000);
     } catch (err) {
-      setError(`Failed to complete submission: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(getFriendlyErrorMessage(errorMessage));
     } finally {
       setLoading(false);
     }

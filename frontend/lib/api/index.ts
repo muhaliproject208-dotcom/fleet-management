@@ -1,9 +1,12 @@
+import { getFriendlyErrorMessage } from '../utils/errorMessages';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 export interface ApiResponse<T = unknown> {
   data?: T | null;
   error?: string;
   message?: string;
+  fieldErrors?: Record<string, string>;
 }
 
 let isRefreshing = false;
@@ -104,8 +107,31 @@ export async function apiRequest<T = unknown>(
     const data = await response.json();
 
     if (!response.ok) {
+      // Extract error message from various response formats
+      let errorMessage = data.error || data.message || data.detail || 'An error occurred';
+      
+      // Handle DRF validation errors (object with field keys)
+      const fieldErrors: Record<string, string> = {};
+      if (typeof data === 'object' && !data.error && !data.message && !data.detail) {
+        const fields = Object.keys(data);
+        if (fields.length > 0) {
+          // This is likely a field validation error object
+          for (const field of fields) {
+            const fieldError = data[field];
+            if (Array.isArray(fieldError) && fieldError.length > 0) {
+              fieldErrors[field] = getFriendlyErrorMessage(fieldError[0]);
+            } else if (typeof fieldError === 'string') {
+              fieldErrors[field] = getFriendlyErrorMessage(fieldError);
+            }
+          }
+          // Use first field error as main error message
+          errorMessage = Object.values(fieldErrors)[0] || errorMessage;
+        }
+      }
+      
       return {
-        error: data.error || data.message || 'An error occurred',
+        error: getFriendlyErrorMessage(errorMessage),
+        fieldErrors: Object.keys(fieldErrors).length > 0 ? fieldErrors : undefined,
         data: null,
       };
     }
@@ -113,7 +139,7 @@ export async function apiRequest<T = unknown>(
     return { data, message: data.message };
   } catch (error) {
     return {
-      error: error instanceof Error ? error.message : 'Network error',
+      error: getFriendlyErrorMessage(error instanceof Error ? error.message : 'Network error'),
       data: null,
     };
   }

@@ -183,6 +183,29 @@ button:disabled {
   color: #00a;
 }
 
+/* Field-level errors */
+.input-error {
+  border-color: #c00 !important;
+  background-color: #fff5f5 !important;
+}
+
+.input-error:focus {
+  border-color: #c00 !important;
+  box-shadow: 0 0 0 3px rgba(204, 0, 0, 0.1);
+}
+
+.field-error {
+  display: block;
+  color: #c00;
+  font-size: 12px;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.form-group.has-error label {
+  color: #c00;
+}
+
 /* Dashboard */
 .dashboard-container {
   max-width: 1200px;

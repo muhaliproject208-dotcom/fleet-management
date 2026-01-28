@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/api/auth';
 import { getDrivers, createDriver, updateDriver, Driver, CreateDriverData } from '@/lib/api/drivers';
 import { getVehicles, Vehicle } from '@/lib/api/vehicles';
+import { getFriendlyErrorMessage } from '@/lib/utils/errorMessages';
 
 export default function DriversPage() {
   const router = useRouter();
@@ -37,7 +38,7 @@ export default function DriversPage() {
     const response = await getDrivers({ is_active: 'all' });
 
     if (response.error) {
-      setError(response.error);
+      setError(getFriendlyErrorMessage(response.error));
     } else if (response.data) {
       setDrivers(response.data.results || []);
     }
@@ -108,7 +109,7 @@ export default function DriversPage() {
       : await createDriver(formData);
 
     if (response.error) {
-      setError(response.error);
+      setError(getFriendlyErrorMessage(response.error));
       setSubmitting(false);
     } else if (response.data) {
       // Handle vehicle assignment if specified
