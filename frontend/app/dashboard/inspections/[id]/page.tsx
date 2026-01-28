@@ -271,6 +271,28 @@ export default function InspectionDetailPage() {
             )
           )}
           
+          {/* Pre-Checklist PDF button - visible for submitted, approved, and completed inspections */}
+          {inspection.status !== InspectionStatus.DRAFT && 
+           inspection.status !== InspectionStatus.REJECTED &&
+           !(canApproveOrReject && inspection.status === InspectionStatus.SUBMITTED) && (
+            <button 
+              onClick={() => handleDownloadPrechecklistPDF()}
+              disabled={pdfLoading}
+              className="button-primary"
+              style={{ 
+                width: 'auto', 
+                backgroundColor: '#2c5aa0',
+                borderColor: '#2c5aa0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span className="material-icons" style={{ fontSize: '18px' }}>picture_as_pdf</span>
+              {pdfLoading ? 'Generating...' : 'Pre-Checklist PDF'}
+            </button>
+          )}
+          
           <button 
             onClick={() => router.push('/dashboard/inspections')} 
             className="button-secondary"
