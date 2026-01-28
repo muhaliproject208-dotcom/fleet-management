@@ -6,6 +6,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.http import HttpResponse
+from django.utils import timezone
 
 from ..models import PreTripInspection, InspectionStatus
 from ..serializers import (
@@ -310,16 +311,40 @@ class PreTripInspectionViewSet(viewsets.ModelViewSet):
         Fleet managers and admins can download any inspection.
         
         GET /api/v1/inspections/{id}/download_pdf/
+        GET /api/v1/inspections/{id}/download_pdf/?approve=true (fleet managers only)
         """
         inspection = self.get_object()
         user = request.user
+        
+        # Check if fleet manager wants to approve first
+        approve_param = request.query_params.get('approve', 'false').lower() == 'true'
+        
+        if approve_param:
+            # Only fleet managers or superusers can approve
+            if not (user.is_superuser_role or user.is_fleet_manager_role):
+                return Response(
+                    {"error": "Only fleet managers can approve inspections"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Only submitted inspections can be approved
+            if inspection.status == InspectionStatus.SUBMITTED:
+                inspection.status = InspectionStatus.APPROVED
+                inspection.approved_by = user
+                inspection.approval_status_updated_at = timezone.now()
+                inspection.save(update_fields=['status', 'approved_by', 'approval_status_updated_at', 'updated_at'])
         
         # Permission check: only approved/completed inspections or fleet manager/admin
         allowed_statuses = [InspectionStatus.APPROVED, InspectionStatus.POST_TRIP_COMPLETED]
         if inspection.status not in allowed_statuses:
             if not (user.is_superuser_role or user.is_fleet_manager_role):
                 return Response(
-                    {"error": "Only approved or completed inspections can be downloaded"},
+                    {
+                        "error": "PDF can only be generated for approved inspections",
+                        "requires_approval": True,
+                        "can_approve": False,
+                        "message": "Please contact the fleet manager to approve this inspection before downloading the PDF."
+                    },
                     status=status.HTTP_403_FORBIDDEN
                 )
         
@@ -351,19 +376,52 @@ class PreTripInspectionViewSet(viewsets.ModelViewSet):
         Download Pre-Checklist PDF report for an inspection.
         Includes only pre-trip sections (Driver Info, Health/Fitness, 
         Documentation, Vehicle Checks).
-        Available for submitted, approved, or completed inspections.
+        
+        PDF can only be downloaded for approved inspections.
+        Fleet managers can approve and download in one request by including ?approve=true
         
         GET /api/v1/inspections/{id}/download_prechecklist_pdf/
+        GET /api/v1/inspections/{id}/download_prechecklist_pdf/?approve=true (fleet managers only)
         """
         inspection = self.get_object()
         user = request.user
         
-        # Permission check: draft inspections not allowed
-        if inspection.status == InspectionStatus.DRAFT:
-            return Response(
-                {"error": "Cannot generate PDF for draft inspections. Please submit first."},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        # Check if fleet manager wants to approve first
+        approve_param = request.query_params.get('approve', 'false').lower() == 'true'
+        
+        if approve_param:
+            # Only fleet managers or superusers can approve
+            if not (user.is_superuser_role or user.is_fleet_manager_role):
+                return Response(
+                    {"error": "Only fleet managers can approve inspections"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Only submitted inspections can be approved
+            if inspection.status == InspectionStatus.SUBMITTED:
+                inspection.status = InspectionStatus.APPROVED
+                inspection.approved_by = user
+                inspection.approval_status_updated_at = timezone.now()
+                inspection.save(update_fields=['status', 'approved_by', 'approval_status_updated_at', 'updated_at'])
+        
+        # Permission check: PDF only for approved or completed inspections
+        # Fleet managers and superusers can download any status
+        allowed_statuses = [InspectionStatus.APPROVED, InspectionStatus.POST_TRIP_COMPLETED]
+        if inspection.status not in allowed_statuses:
+            if not (user.is_superuser_role or user.is_fleet_manager_role):
+                # Check if user is a fleet manager - they get a different message
+                return Response(
+                    {
+                        "error": "Pre-checklist PDF can only be generated for approved inspections",
+                        "requires_approval": True,
+                        "can_approve": False,
+                        "message": "Please contact the fleet manager to approve this inspection before downloading the PDF."
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            else:
+                # Fleet manager can still download but warn them it's not approved
+                pass  # Allow the download for fleet managers
         
         try:
             # Generate Pre-Checklist PDF

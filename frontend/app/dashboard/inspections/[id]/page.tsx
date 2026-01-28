@@ -19,6 +19,7 @@ export default function InspectionDetailPage() {
   const [success, setSuccess] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showPostTripConfirmModal, setShowPostTripConfirmModal] = useState(false);
+  const [showApprovalRequiredModal, setShowApprovalRequiredModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [userRole, setUserRole] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -112,18 +113,31 @@ export default function InspectionDetailPage() {
     setActionLoading(false);
   };
 
-  const handleDownloadPrechecklistPDF = async () => {
+  const handleDownloadPrechecklistPDF = async (approveFirst = false) => {
     if (!inspection) return;
     
     setPdfLoading(true);
     setError('');
+    setShowApprovalRequiredModal(false);
     
-    const response = await downloadPrechecklistPDF(inspection.id, inspection.inspection_id);
+    const response = await downloadPrechecklistPDF(inspection.id, inspection.inspection_id, approveFirst);
     
     if (response.error) {
-      setError(response.error);
+      // Check if approval is required
+      if (response.requires_approval) {
+        setShowApprovalRequiredModal(true);
+      } else {
+        setError(response.error);
+      }
     } else {
       setSuccess('Pre-checklist PDF downloaded successfully!');
+      // Refresh inspection data if we approved first
+      if (approveFirst) {
+        const refreshed = await getInspection(id);
+        if (refreshed.data) {
+          setInspection(refreshed.data);
+        }
+      }
     }
     
     setPdfLoading(false);
@@ -331,6 +345,84 @@ export default function InspectionDetailPage() {
                 {actionLoading ? 'Rejecting...' : 'Confirm Reject'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Approval Required Modal */}
+      {showApprovalRequiredModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            backgroundColor: '#fff',
+            padding: '30px',
+            borderRadius: '12px',
+            maxWidth: '500px',
+            width: '90%',
+            textAlign: 'center',
+          }}>
+            <span className="material-icons" style={{ fontSize: '64px', color: '#FFA500', marginBottom: '20px' }}>
+              warning
+            </span>
+            <h3 style={{ color: '#000', marginBottom: '15px' }}>Approval Required</h3>
+            <p style={{ color: '#666', marginBottom: '20px' }}>
+              Pre-checklist PDF can only be generated for approved inspections.
+            </p>
+            {canApproveOrReject ? (
+              <>
+                <p style={{ color: '#333', marginBottom: '20px', fontWeight: '500' }}>
+                  As a Fleet Manager, you can approve this inspection and generate the PDF.
+                </p>
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                  <button 
+                    onClick={() => setShowApprovalRequiredModal(false)}
+                    className="button-secondary"
+                    style={{ width: 'auto' }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={() => handleDownloadPrechecklistPDF(true)}
+                    disabled={pdfLoading}
+                    className="button-primary"
+                    style={{ 
+                      width: 'auto',
+                      backgroundColor: '#000',
+                      borderColor: '#000',
+                    }}
+                  >
+                    {pdfLoading ? 'Processing...' : 'Approve & Download PDF'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p style={{ color: '#333', marginBottom: '20px' }}>
+                  Please contact the Fleet Manager to approve this inspection before the PDF can be downloaded.
+                </p>
+                <button 
+                  onClick={() => setShowApprovalRequiredModal(false)}
+                  className="button-primary"
+                  style={{ 
+                    width: 'auto',
+                    backgroundColor: '#000',
+                    borderColor: '#000',
+                  }}
+                >
+                  OK
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

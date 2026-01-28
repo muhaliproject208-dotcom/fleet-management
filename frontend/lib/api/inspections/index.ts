@@ -243,14 +243,29 @@ export const rejectInspection = async (
   }
 };
 
-export const downloadPrechecklistPDF = async (id: string, inspectionId?: string): Promise<APIResponse<boolean>> => {
+export interface PrechecklistPDFResponse {
+  error?: string;
+  requires_approval?: boolean;
+  can_approve?: boolean;
+  message?: string;
+}
+
+export const downloadPrechecklistPDF = async (
+  id: string, 
+  inspectionId?: string,
+  approveFirst?: boolean
+): Promise<APIResponse<boolean> & { requires_approval?: boolean; can_approve?: boolean; message?: string }> => {
   try {
     const token = localStorage.getItem('access_token');
     if (!token) {
       return { error: 'No authentication token found' };
     }
 
-    const response = await fetch(`${API_URL}/inspections/${id}/download_prechecklist_pdf/`, {
+    const url = approveFirst 
+      ? `${API_URL}/inspections/${id}/download_prechecklist_pdf/?approve=true`
+      : `${API_URL}/inspections/${id}/download_prechecklist_pdf/`;
+    
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -258,18 +273,23 @@ export const downloadPrechecklistPDF = async (id: string, inspectionId?: string)
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return { error: errorData.error || 'Failed to generate pre-checklist PDF' };
+      const errorData: PrechecklistPDFResponse = await response.json().catch(() => ({}));
+      return { 
+        error: errorData.error || 'Failed to generate pre-checklist PDF',
+        requires_approval: errorData.requires_approval,
+        can_approve: errorData.can_approve,
+        message: errorData.message,
+      };
     }
 
     const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
+    const downloadUrl = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
+    a.href = downloadUrl;
     a.download = `prechecklist-${inspectionId || id}.pdf`;
     document.body.appendChild(a);
     a.click();
-    window.URL.revokeObjectURL(url);
+    window.URL.revokeObjectURL(downloadUrl);
     document.body.removeChild(a);
 
     return { data: true };
