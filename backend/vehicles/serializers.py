@@ -66,11 +66,18 @@ class VehicleListSerializer(serializers.ModelSerializer):
         return value
     
     def validate_vehicle_type(self, value):
-        """Validate vehicle type is not empty"""
+        """Validate vehicle type is not empty and is a valid choice"""
         if not value or not value.strip():
             raise serializers.ValidationError("Vehicle type cannot be empty.")
         
-        return value.strip()
+        value = value.strip()
+        valid_choices = [choice[0] for choice in Vehicle.VEHICLE_TYPE_CHOICES]
+        if value not in valid_choices:
+            raise serializers.ValidationError(
+                f"Invalid vehicle type. Must be one of: {', '.join(valid_choices)}"
+            )
+        
+        return value
 
 
 class VehicleDetailSerializer(serializers.ModelSerializer):

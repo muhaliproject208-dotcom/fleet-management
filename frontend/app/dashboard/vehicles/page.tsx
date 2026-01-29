@@ -239,14 +239,19 @@ export default function VehiclesPage() {
               </div>
               <div style={{ marginBottom: '15px' }}>
                 <label className="label">Vehicle Type *</label>
-                <input
-                  type="text"
+                <select
                   className="input"
                   required
-                  placeholder="Freight Truck"
                   value={formData.vehicle_type}
                   onChange={(e) => setFormData({ ...formData, vehicle_type: e.target.value })}
-                />
+                >
+                  <option value="">-- Select Vehicle Type --</option>
+                  <option value="Truck">Truck</option>
+                  <option value="Small Truck">Small Truck</option>
+                  <option value="Big Bus">Big Bus</option>
+                  <option value="Mini Bus">Mini Bus</option>
+                  <option value="Car">Car</option>
+                </select>
               </div>
 
               <div style={{ marginBottom: '15px' }}>

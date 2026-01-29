@@ -10,6 +10,21 @@ class Vehicle(models.Model):
     One-to-one relationship: Each vehicle can only have one driver and vice versa.
     """
     
+    # Vehicle Type Choices
+    VEHICLE_TYPE_TRUCK = 'Truck'
+    VEHICLE_TYPE_SMALL_TRUCK = 'Small Truck'
+    VEHICLE_TYPE_BIG_BUS = 'Big Bus'
+    VEHICLE_TYPE_MINI_BUS = 'Mini Bus'
+    VEHICLE_TYPE_CAR = 'Car'
+    
+    VEHICLE_TYPE_CHOICES = [
+        (VEHICLE_TYPE_TRUCK, 'Truck'),
+        (VEHICLE_TYPE_SMALL_TRUCK, 'Small Truck'),
+        (VEHICLE_TYPE_BIG_BUS, 'Big Bus'),
+        (VEHICLE_TYPE_MINI_BUS, 'Mini Bus'),
+        (VEHICLE_TYPE_CAR, 'Car'),
+    ]
+    
     vehicle_id = models.CharField(
         max_length=20,
         unique=True,
@@ -25,7 +40,8 @@ class Vehicle(models.Model):
     )
     vehicle_type = models.CharField(
         max_length=50,
-        help_text="Vehicle type (e.g., Freight Truck, Van, Pickup)"
+        choices=VEHICLE_TYPE_CHOICES,
+        help_text="Vehicle type (Truck, Small Truck, Big Bus, Mini Bus, Car)"
     )
     driver = models.OneToOneField(
         'drivers.Driver',
