@@ -216,7 +216,7 @@ export default function InspectionDetailPage() {
                 {actionLoading ? 'Processing...' : 'Approve'}
               </button>
               <button 
-                onClick={handleDownloadPrechecklistPDF}
+                onClick={() => handleDownloadPrechecklistPDF()}
                 disabled={pdfLoading}
                 className="button-primary"
                 style={{ 
