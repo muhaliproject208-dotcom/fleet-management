@@ -1400,7 +1400,7 @@ export default function NewInspectionWizard() {
           <div>
             {renderSectionHeader(true)}
             
-            {/* CRITICAL: Rest/Fatigue Clearance - Must be first and prominent */
+            {/* CRITICAL: Rest/Fatigue Clearance - Must be first and prominent */}
             <div style={{ 
               marginBottom: '30px', 
               padding: '20px', 
