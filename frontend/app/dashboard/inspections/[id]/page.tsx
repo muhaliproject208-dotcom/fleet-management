@@ -823,11 +823,13 @@ function CheckItem({ label, status, remarks, value }: {
 
 function BooleanItem({ label, value, remarks, invertColor }: { 
   label: string; 
-  value: boolean; 
+  value: boolean | string; 
   remarks?: string | null;
   invertColor?: boolean;
 }) {
-  const isPositive = invertColor ? !value : value;
+  // Handle both boolean and 'yes'/'no' string values
+  const boolValue = typeof value === 'string' ? value === 'yes' : value;
+  const isPositive = invertColor ? !boolValue : boolValue;
   return (
     <div>
       <span style={{ color: '#666', fontSize: '14px' }}>{label}:</span>
@@ -836,7 +838,7 @@ function BooleanItem({ label, value, remarks, invertColor }: {
         fontWeight: '600', 
         marginTop: '5px' 
       }}>
-        {value ? 'Yes' : 'No'}
+        {boolValue ? 'Yes' : 'No'}
       </p>
       {remarks && (
         <p style={{ color: '#666', fontSize: '13px', marginTop: '3px', fontStyle: 'italic' }}>

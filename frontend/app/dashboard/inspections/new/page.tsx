@@ -366,8 +366,8 @@ export default function NewInspectionWizard() {
               route_familiarity: inspection.documentation.route_familiarity,
               emergency_procedures_known: inspection.documentation.emergency_procedures_known,
               gps_activated: inspection.documentation.gps_activated,
-              safety_briefing_provided: inspection.documentation.safety_briefing_provided,
-              rtsa_clearance: inspection.documentation.rtsa_clearance,
+              safety_briefing_provided: (inspection.documentation.safety_briefing_provided === true ? 'yes' : inspection.documentation.safety_briefing_provided === false ? 'no' : inspection.documentation.safety_briefing_provided || '') as 'yes' | 'no' | '',
+              rtsa_clearance: (inspection.documentation.rtsa_clearance === true ? 'yes' : inspection.documentation.rtsa_clearance === false ? 'no' : inspection.documentation.rtsa_clearance || '') as 'yes' | 'no' | '',
               emergency_contact: inspection.documentation.emergency_contact || '',
             } : {}),
             
@@ -418,6 +418,7 @@ export default function NewInspectionWizard() {
             interior: !!(inspection.interior_cabin_checks && inspection.interior_cabin_checks.length > 0),
             functional: !!(inspection.functional_checks && inspection.functional_checks.length > 0),
             safety: !!(inspection.safety_equipment_checks && inspection.safety_equipment_checks.length > 0),
+            brakes_steering: !!(inspection.brakes_steering_checks && inspection.brakes_steering_checks.length > 0),
           });
           
           // Store IDs for OneToOne relationships (needed for updates)
@@ -617,8 +618,8 @@ export default function NewInspectionWizard() {
             route_familiarity: inspection.documentation.route_familiarity,
             emergency_procedures_known: inspection.documentation.emergency_procedures_known,
             gps_activated: inspection.documentation.gps_activated,
-            safety_briefing_provided: inspection.documentation.safety_briefing_provided,
-            rtsa_clearance: inspection.documentation.rtsa_clearance,
+            safety_briefing_provided: (inspection.documentation.safety_briefing_provided === true ? 'yes' : inspection.documentation.safety_briefing_provided === false ? 'no' : inspection.documentation.safety_briefing_provided || '') as 'yes' | 'no' | '',
+            rtsa_clearance: (inspection.documentation.rtsa_clearance === true ? 'yes' : inspection.documentation.rtsa_clearance === false ? 'no' : inspection.documentation.rtsa_clearance || '') as 'yes' | 'no' | '',
             emergency_contact: inspection.documentation.emergency_contact || '',
           } : {}),
           
