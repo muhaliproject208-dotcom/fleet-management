@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Mechanic
+from .models import Mechanic, CertificationStatus, ServiceType
 import re
 
 User = get_user_model()
@@ -18,6 +18,10 @@ class CreatedBySerializer(serializers.ModelSerializer):
 
 class MechanicListSerializer(serializers.ModelSerializer):
     """Serializer for listing mechanics (compact view)"""
+    certification_status_display = serializers.CharField(
+        source='get_certification_status_display', 
+        read_only=True
+    )
     
     class Meta:
         model = Mechanic
@@ -27,9 +31,11 @@ class MechanicListSerializer(serializers.ModelSerializer):
             'full_name',
             'specialization',
             'phone_number',
+            'certification_status',
+            'certification_status_display',
             'is_active'
         ]
-        read_only_fields = ['id', 'mechanic_id']
+        read_only_fields = ['id', 'mechanic_id', 'certification_status_display']
     
     def validate_phone_number(self, value):
         """Validate phone number format"""
@@ -60,6 +66,10 @@ class MechanicListSerializer(serializers.ModelSerializer):
 class MechanicDetailSerializer(serializers.ModelSerializer):
     """Serializer for detailed mechanic view with all fields"""
     created_by = CreatedBySerializer(read_only=True)
+    certification_status_display = serializers.CharField(
+        source='get_certification_status_display', 
+        read_only=True
+    )
     
     class Meta:
         model = Mechanic
@@ -69,12 +79,17 @@ class MechanicDetailSerializer(serializers.ModelSerializer):
             'full_name',
             'specialization',
             'phone_number',
+            'certification_status',
+            'certification_status_display',
+            'last_vehicle_maintenance_date',
+            'last_full_service_date',
+            'last_partial_service_date',
             'is_active',
             'created_at',
             'updated_at',
             'created_by'
         ]
-        read_only_fields = ['id', 'mechanic_id', 'created_at', 'updated_at', 'created_by']
+        read_only_fields = ['id', 'mechanic_id', 'certification_status_display', 'created_at', 'updated_at', 'created_by']
     
     def validate_phone_number(self, value):
         """Validate phone number format"""

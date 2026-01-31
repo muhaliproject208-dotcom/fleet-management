@@ -5,6 +5,7 @@ from ..models import (
     InteriorCabinCheck,
     FunctionalCheck,
     SafetyEquipmentCheck,
+    BrakesSteeringCheck,
 )
 
 
@@ -134,5 +135,31 @@ class SafetyEquipmentCheckSerializer(serializers.ModelSerializer):
         if value not in valid_items:
             raise serializers.ValidationError(
                 f'Invalid safety equipment item. Must be one of: {", ".join(valid_items)}'
+            )
+        return value
+
+
+class BrakesSteeringCheckSerializer(serializers.ModelSerializer):
+    """Serializer for Brakes & Steering Checks"""
+    
+    class Meta:
+        model = BrakesSteeringCheck
+        fields = [
+            'id',
+            'inspection',
+            'check_item',
+            'status',
+            'remarks',
+            'created_at',
+            'updated_at'
+        ]
+        read_only_fields = ['id', 'inspection', 'created_at', 'updated_at']
+    
+    def validate_check_item(self, value):
+        """Validate check_item is valid for brakes/steering checks"""
+        valid_items = BrakesSteeringCheck.BrakesSteeringItems.values
+        if value not in valid_items:
+            raise serializers.ValidationError(
+                f'Invalid brakes/steering check item. Must be one of: {", ".join(valid_items)}'
             )
         return value

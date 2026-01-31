@@ -7,6 +7,7 @@ from .vehicle_checks import (
     InteriorCabinCheckViewSet,
     FunctionalCheckViewSet,
     SafetyEquipmentCheckViewSet,
+    BrakesSteeringCheckViewSet,
 )
 from .behavior import (
     TripBehaviorMonitoringViewSet,
@@ -36,6 +37,7 @@ __all__ = [
     'InteriorCabinCheckViewSet',
     'FunctionalCheckViewSet',
     'SafetyEquipmentCheckViewSet',
+    'BrakesSteeringCheckViewSet',
     'TripBehaviorMonitoringViewSet',
     'DrivingBehaviorCheckViewSet',
     'PostTripReportViewSet',

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/api/auth';
-import { getMechanics, createMechanic, updateMechanic, Mechanic, CreateMechanicData } from '@/lib/api/mechanics';
+import { getMechanics, createMechanic, updateMechanic, Mechanic, CreateMechanicData, CertificationStatus } from '@/lib/api/mechanics';
 import { getFriendlyErrorMessage } from '@/lib/utils/errorMessages';
 
 export default function MechanicsPage() {
@@ -18,6 +18,10 @@ export default function MechanicsPage() {
     full_name: '',
     specialization: '',
     phone_number: '',
+    certification_status: 'certified',
+    last_vehicle_maintenance_date: '',
+    last_full_service_date: '',
+    last_partial_service_date: '',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -53,6 +57,10 @@ export default function MechanicsPage() {
         full_name: mechanic.full_name,
         specialization: mechanic.specialization,
         phone_number: mechanic.phone_number,
+        certification_status: mechanic.certification_status || 'certified',
+        last_vehicle_maintenance_date: mechanic.last_vehicle_maintenance_date || '',
+        last_full_service_date: mechanic.last_full_service_date || '',
+        last_partial_service_date: mechanic.last_partial_service_date || '',
       });
     } else {
       setEditingMechanic(null);
@@ -60,6 +68,10 @@ export default function MechanicsPage() {
         full_name: '',
         specialization: '',
         phone_number: '',
+        certification_status: 'certified',
+        last_vehicle_maintenance_date: '',
+        last_full_service_date: '',
+        last_partial_service_date: '',
       });
     }
     setModalOpen(true);
@@ -74,6 +86,10 @@ export default function MechanicsPage() {
       full_name: '',
       specialization: '',
       phone_number: '',
+      certification_status: 'certified',
+      last_vehicle_maintenance_date: '',
+      last_full_service_date: '',
+      last_partial_service_date: '',
     });
     setError('');
   };
@@ -148,6 +164,7 @@ export default function MechanicsPage() {
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>ID</th>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Name</th>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Specialization</th>
+                <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Certification</th>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Phone</th>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Status</th>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Actions</th>
@@ -159,6 +176,11 @@ export default function MechanicsPage() {
                   <td style={{ padding: '12px', color: '#000' }}>{mechanic.mechanic_id}</td>
                   <td style={{ padding: '12px', color: '#000' }}>{mechanic.full_name}</td>
                   <td style={{ padding: '12px', color: '#000' }}>{mechanic.specialization}</td>
+                  <td style={{ padding: '12px' }}>
+                    <span className={mechanic.certification_status === 'certified' ? 'badge badge-verified' : 'badge badge-unverified'}>
+                      {mechanic.certification_status === 'certified' ? 'Certified' : 'Not Certified'}
+                    </span>
+                  </td>
                   <td style={{ padding: '12px', color: '#000' }}>{mechanic.phone_number}</td>
                   <td style={{ padding: '12px' }}>
                     <span className={mechanic.is_active ? 'badge badge-verified' : 'badge badge-unverified'}>
@@ -245,6 +267,44 @@ export default function MechanicsPage() {
                   placeholder="+260977654321"
                   value={formData.phone_number}
                   onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+                />
+              </div>
+              <div style={{ marginBottom: '15px' }}>
+                <label className="label">Certification Status *</label>
+                <select
+                  className="input"
+                  value={formData.certification_status}
+                  onChange={(e) => setFormData({ ...formData, certification_status: e.target.value as CertificationStatus })}
+                >
+                  <option value="certified">Certified</option>
+                  <option value="not_certified">Not Certified</option>
+                </select>
+              </div>
+              <div style={{ marginBottom: '15px' }}>
+                <label className="label">Last Vehicle Maintenance Date</label>
+                <input
+                  type="date"
+                  className="input"
+                  value={formData.last_vehicle_maintenance_date || ''}
+                  onChange={(e) => setFormData({ ...formData, last_vehicle_maintenance_date: e.target.value })}
+                />
+              </div>
+              <div style={{ marginBottom: '15px' }}>
+                <label className="label">Last Full Service Date</label>
+                <input
+                  type="date"
+                  className="input"
+                  value={formData.last_full_service_date || ''}
+                  onChange={(e) => setFormData({ ...formData, last_full_service_date: e.target.value })}
+                />
+              </div>
+              <div style={{ marginBottom: '15px' }}>
+                <label className="label">Last Partial Service Date</label>
+                <input
+                  type="date"
+                  className="input"
+                  value={formData.last_partial_service_date || ''}
+                  onChange={(e) => setFormData({ ...formData, last_partial_service_date: e.target.value })}
                 />
               </div>
 

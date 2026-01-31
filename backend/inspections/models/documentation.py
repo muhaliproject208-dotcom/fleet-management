@@ -9,6 +9,12 @@ class DocumentStatus(models.TextChoices):
     INVALID = 'invalid', 'Invalid'
 
 
+class YesNoChoice(models.TextChoices):
+    """Yes/No choices for boolean-like fields"""
+    YES = 'yes', 'Yes'
+    NO = 'no', 'No'
+
+
 class DocumentationCompliance(models.Model):
     """
     Documentation and Compliance Check model for pre-trip inspections.
@@ -21,11 +27,66 @@ class DocumentationCompliance(models.Model):
         related_name='documentation',
         help_text="Associated pre-trip inspection"
     )
+    
+    # Certificate of Fitness Valid (Yes or No)
+    certificate_of_fitness_valid = models.CharField(
+        max_length=10,
+        choices=YesNoChoice.choices,
+        default=YesNoChoice.NO,
+        help_text="Is Certificate of Fitness valid? (Yes or No)"
+    )
+    
+    # Legacy field for backwards compatibility
     certificate_of_fitness = models.CharField(
         max_length=10,
         choices=DocumentStatus.choices,
-        help_text="Certificate of fitness status"
+        help_text="Certificate of fitness status (legacy)"
     )
+    
+    # Safety Briefing Provided (Yes or No)
+    safety_briefing_provided = models.CharField(
+        max_length=10,
+        choices=YesNoChoice.choices,
+        default=YesNoChoice.NO,
+        help_text="Was safety briefing provided? (Yes or No)"
+    )
+    
+    # Time Briefing Conducted
+    time_briefing_conducted = models.TimeField(
+        null=True,
+        blank=True,
+        help_text="Time when briefing was conducted"
+    )
+    
+    # RTSA Clearance (If Applicable) (Yes or No)
+    rtsa_clearance = models.CharField(
+        max_length=10,
+        choices=YesNoChoice.choices,
+        default=YesNoChoice.NO,
+        help_text="RTSA Clearance obtained (If Applicable)? (Yes or No)"
+    )
+    
+    # Emergency Contact - Employer
+    emergency_contact_employer = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Emergency contact - Employer (name and phone number)"
+    )
+    
+    # Emergency Contact - Government
+    emergency_contact_government = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Emergency contact - Government (name and phone number)"
+    )
+    
+    # Legacy emergency contact field
+    emergency_contact = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Emergency contact information (legacy)"
+    )
+    
     road_tax_valid = models.BooleanField(
         default=False,
         help_text="Road tax is valid"
@@ -66,19 +127,6 @@ class DocumentationCompliance(models.Model):
         default=False,
         help_text="GPS tracking is activated"
     )
-    safety_briefing_provided = models.BooleanField(
-        default=False,
-        help_text="Safety briefing has been provided"
-    )
-    rtsa_clearance = models.BooleanField(
-        default=False,
-        help_text="RTSA clearance obtained"
-    )
-    emergency_contact = models.CharField(
-        max_length=100,
-        blank=True,
-        help_text="Emergency contact information"
-    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -97,8 +145,12 @@ class DocumentationCompliance(models.Model):
         Required: certificate of fitness (valid), road tax, insurance, 
         trip authorization, logbook
         """
+        cert_fitness_valid = (
+            self.certificate_of_fitness_valid == YesNoChoice.YES or 
+            self.certificate_of_fitness == DocumentStatus.VALID
+        )
         return (
-            self.certificate_of_fitness == DocumentStatus.VALID and
+            cert_fitness_valid and
             self.road_tax_valid and
             self.insurance_valid and
             self.trip_authorization_signed and
@@ -109,7 +161,11 @@ class DocumentationCompliance(models.Model):
         """Return list of missing or invalid documents"""
         missing = []
         
-        if self.certificate_of_fitness != DocumentStatus.VALID:
+        cert_fitness_valid = (
+            self.certificate_of_fitness_valid == YesNoChoice.YES or 
+            self.certificate_of_fitness == DocumentStatus.VALID
+        )
+        if not cert_fitness_valid:
             missing.append('Certificate of Fitness')
         if not self.road_tax_valid:
             missing.append('Road Tax')
@@ -131,9 +187,21 @@ class DocumentationCompliance(models.Model):
             missing.append('Emergency Procedures Knowledge')
         if not self.gps_activated:
             missing.append('GPS Activation')
-        if not self.safety_briefing_provided:
+        
+        # Check safety briefing
+        safety_briefing_ok = (
+            self.safety_briefing_provided == YesNoChoice.YES if isinstance(self.safety_briefing_provided, str) 
+            else self.safety_briefing_provided
+        )
+        if not safety_briefing_ok:
             missing.append('Safety Briefing')
-        if not self.rtsa_clearance:
+        
+        # Check RTSA clearance
+        rtsa_ok = (
+            self.rtsa_clearance == YesNoChoice.YES if isinstance(self.rtsa_clearance, str)
+            else self.rtsa_clearance
+        )
+        if not rtsa_ok:
             missing.append('RTSA Clearance')
         
         return missing

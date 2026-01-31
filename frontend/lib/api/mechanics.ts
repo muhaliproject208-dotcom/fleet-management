@@ -1,5 +1,7 @@
 import { API_URL } from './index';
 
+export type CertificationStatus = 'certified' | 'not_certified';
+
 export interface Mechanic {
   id: string;
   mechanic_id: string;
@@ -7,6 +9,10 @@ export interface Mechanic {
   specialization: string;
   phone_number: string;
   is_active: boolean;
+  certification_status?: CertificationStatus;
+  last_vehicle_maintenance_date?: string;
+  last_full_service_date?: string;
+  last_partial_service_date?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -15,6 +21,10 @@ export interface CreateMechanicData {
   full_name: string;
   specialization: string;
   phone_number: string;
+  certification_status?: CertificationStatus;
+  last_vehicle_maintenance_date?: string;
+  last_full_service_date?: string;
+  last_partial_service_date?: string;
 }
 
 export interface UpdateMechanicData extends Partial<CreateMechanicData> {

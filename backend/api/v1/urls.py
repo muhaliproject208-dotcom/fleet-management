@@ -24,6 +24,7 @@ from inspections.views import (
     InteriorCabinCheckViewSet,
     FunctionalCheckViewSet,
     SafetyEquipmentCheckViewSet,
+    BrakesSteeringCheckViewSet,
     TripBehaviorMonitoringViewSet,
     DrivingBehaviorCheckViewSet,
     PostTripReportViewSet,
@@ -53,6 +54,7 @@ inspections_router.register(r'engine-checks', EngineFluidCheckViewSet, basename=
 inspections_router.register(r'interior-checks', InteriorCabinCheckViewSet, basename='inspection-interior')
 inspections_router.register(r'functional-checks', FunctionalCheckViewSet, basename='inspection-functional')
 inspections_router.register(r'safety-checks', SafetyEquipmentCheckViewSet, basename='inspection-safety')
+inspections_router.register(r'brakes-steering-checks', BrakesSteeringCheckViewSet, basename='inspection-brakes-steering')
 inspections_router.register(r'trip-behaviors', TripBehaviorMonitoringViewSet, basename='inspection-trip-behavior')
 inspections_router.register(r'driving-behaviors', DrivingBehaviorCheckViewSet, basename='inspection-driving-behavior')
 inspections_router.register(r'post-trip', PostTripReportViewSet, basename='inspection-post-trip')

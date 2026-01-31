@@ -5,6 +5,7 @@ from ..models import (
     InteriorCabinCheck,
     FunctionalCheck,
     SafetyEquipmentCheck,
+    BrakesSteeringCheck,
 )
 
 
@@ -102,4 +103,10 @@ class FunctionalCheckAdmin(BaseVehicleCheckAdmin):
 @admin.register(SafetyEquipmentCheck)
 class SafetyEquipmentCheckAdmin(BaseVehicleCheckAdmin):
     """Admin configuration for SafetyEquipmentCheck model"""
+    pass
+
+
+@admin.register(BrakesSteeringCheck)
+class BrakesSteeringCheckAdmin(BaseVehicleCheckAdmin):
+    """Admin configuration for BrakesSteeringCheck model"""
     pass

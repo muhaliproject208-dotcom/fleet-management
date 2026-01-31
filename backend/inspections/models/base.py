@@ -15,6 +15,30 @@ class InspectionStatus(models.TextChoices):
     POST_TRIP_COMPLETED = 'post_trip_completed', 'Post-Trip Completed'
 
 
+# Approved driving hours choices (1 hour to 24 hours in 15 minute intervals)
+def generate_driving_hours_choices():
+    """Generate choices for approved driving hours from 1hr to 24hrs in 15min intervals"""
+    choices = []
+    for hours in range(1, 25):  # 1 to 24 hours
+        for minutes in [0, 15, 30, 45]:
+            if hours == 24 and minutes > 0:
+                continue  # Skip values beyond 24:00
+            if hours == 1 and minutes == 0:
+                time_str = f"{hours}:00"
+                display = f"{hours} hour"
+            elif minutes == 0:
+                time_str = f"{hours}:00"
+                display = f"{hours} hours"
+            else:
+                time_str = f"{hours}:{minutes:02d}"
+                display = f"{hours} hrs {minutes} mins"
+            choices.append((time_str, display))
+    return choices
+
+
+DRIVING_HOURS_CHOICES = generate_driving_hours_choices()
+
+
 class PreTripInspection(models.Model):
     """
     Pre-Trip Inspection model for fleet management system.
@@ -63,7 +87,12 @@ class PreTripInspection(models.Model):
     )
     approved_driving_hours = models.CharField(
         max_length=20,
-        help_text="Approved driving hours (e.g., 6 hrs 50 mins)"
+        choices=DRIVING_HOURS_CHOICES,
+        help_text="Approved driving hours (dropdown from 1hr to 24hrs in 15min intervals)"
+    )
+    driver_rest_approved = models.BooleanField(
+        default=False,
+        help_text="Whether driver rest is approved (Yes or No)"
     )
     approved_rest_stops = models.IntegerField(
         default=0,

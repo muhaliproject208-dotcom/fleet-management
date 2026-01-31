@@ -73,6 +73,7 @@ export interface PreTripInspection {
   route: string;
   approved_driving_hours: string;
   approved_rest_stops: number;
+  driver_rest_approved?: boolean;
   
   // Workflow
   status: InspectionStatus;
@@ -177,6 +178,7 @@ export interface PreTripInspectionFull extends PreTripInspection {
   interior_cabin_checks?: VehicleCheck[];
   functional_checks?: VehicleCheck[];
   safety_equipment_checks?: VehicleCheck[];
+  brakes_steering_checks?: VehicleCheck[];
   
   // Trip behaviors (ForeignKey many)
   trip_behaviors?: TripBehavior[];
@@ -277,6 +279,7 @@ export interface DocumentationCompliance {
   
   // Documentation checks
   certificate_of_fitness: 'valid' | 'invalid';
+  certificate_of_fitness_valid?: 'yes' | 'no';
   road_tax_valid: boolean;
   insurance_valid: boolean;
   trip_authorization_signed: boolean;
@@ -287,9 +290,12 @@ export interface DocumentationCompliance {
   route_familiarity: boolean;
   emergency_procedures_known: boolean;
   gps_activated: boolean;
-  safety_briefing_provided: boolean;
-  rtsa_clearance: boolean;
+  safety_briefing_provided: boolean | string;
+  rtsa_clearance: boolean | string;
   emergency_contact: string;
+  emergency_contact_employer?: string;
+  emergency_contact_government?: string;
+  time_briefing_conducted?: string;
   
   created_at: string;
   updated_at: string;
@@ -298,6 +304,7 @@ export interface DocumentationCompliance {
 export interface CreateDocumentationData {
   inspection: string;
   certificate_of_fitness: 'valid' | 'invalid';
+  certificate_of_fitness_valid?: 'yes' | 'no';
   road_tax_valid: boolean;
   insurance_valid: boolean;
   trip_authorization_signed: boolean;
@@ -308,9 +315,12 @@ export interface CreateDocumentationData {
   route_familiarity: boolean;
   emergency_procedures_known: boolean;
   gps_activated: boolean;
-  safety_briefing_provided: boolean;
-  rtsa_clearance: boolean;
+  safety_briefing_provided: boolean | string;
+  rtsa_clearance: boolean | string;
   emergency_contact: string;
+  emergency_contact_employer?: string;
+  emergency_contact_government?: string;
+  time_briefing_conducted?: string;
 }
 
 // API Response Types
@@ -329,11 +339,14 @@ export interface APIResponse<T> {
 
 // Pre-Trip Score Summary
 
+export type RiskStatus = 'low_risk' | 'moderate_risk' | 'high_risk' | 'critical_risk';
+
 export interface SectionScoreSummary {
   section: string;
   score: number;
   max: number;
   percentage: number;
+  questions?: number;
 }
 
 export interface PreTripScoreSummary {
@@ -343,25 +356,38 @@ export interface PreTripScoreSummary {
   // Section scores
   health_fitness_score: number;
   health_fitness_max: number;
+  health_fitness_questions?: number;
   documentation_score: number;
   documentation_max: number;
+  documentation_questions?: number;
   vehicle_exterior_score: number;
   vehicle_exterior_max: number;
+  vehicle_exterior_questions?: number;
   engine_fluid_score: number;
   engine_fluid_max: number;
+  engine_fluid_questions?: number;
   interior_cabin_score: number;
   interior_cabin_max: number;
+  interior_cabin_questions?: number;
   functional_score: number;
   functional_max: number;
+  functional_questions?: number;
   safety_equipment_score: number;
   safety_equipment_max: number;
+  safety_equipment_questions?: number;
+  brakes_steering_score?: number;
+  brakes_steering_max?: number;
+  brakes_steering_questions?: number;
   
   // Overall scores
   total_score: number;
   max_possible_score: number;
+  total_questions?: number;
   score_percentage: number;
   score_level: 'excellent' | 'good' | 'fair' | 'poor';
   score_level_display?: string;
+  risk_status?: RiskStatus;
+  risk_status_display?: string;
   
   // Critical failures
   critical_failures: string[];
@@ -373,6 +399,13 @@ export interface PreTripScoreSummary {
   
   // Computed
   section_summary?: SectionScoreSummary[];
+  total_summary?: {
+    total_score: number;
+    max_possible_score: number;
+    total_questions: number;
+    score_percentage: number;
+    risk_status: RiskStatus;
+  };
   
   created_at: string;
   updated_at: string;

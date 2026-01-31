@@ -17,6 +17,7 @@ from .vehicle_checks import (
     InteriorCabinCheckSerializer,
     FunctionalCheckSerializer,
     SafetyEquipmentCheckSerializer,
+    BrakesSteeringCheckSerializer,
 )
 from .behavior import (
     TripBehaviorMonitoringSerializer,
@@ -55,6 +56,7 @@ __all__ = [
     'InteriorCabinCheckSerializer',
     'FunctionalCheckSerializer',
     'SafetyEquipmentCheckSerializer',
+    'BrakesSteeringCheckSerializer',
     'TripBehaviorMonitoringSerializer',
     'DrivingBehaviorCheckSerializer',
     'PostTripReportSerializer',

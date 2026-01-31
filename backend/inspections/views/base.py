@@ -522,3 +522,59 @@ class PreTripInspectionViewSet(viewsets.ModelViewSet):
         stats['critical_failures'] = critical_failures
         
         return Response(stats)
+    
+    @action(detail=True, methods=['get'], url_path='download_section_pdf/(?P<section>[^/.]+)')
+    def download_section_pdf(self, request, pk=None, section=None):
+        """
+        Download PDF report for a specific section of the pre-trip checklist.
+        This allows generating PDF for each form in the wizard before proceeding to next.
+        
+        Valid sections: health_fitness, documentation, exterior, engine, 
+                       interior, functional, safety, brakes_steering
+        
+        GET /api/v1/inspections/{id}/download_section_pdf/health_fitness/
+        GET /api/v1/inspections/{id}/download_section_pdf/documentation/
+        GET /api/v1/inspections/{id}/download_section_pdf/exterior/
+        GET /api/v1/inspections/{id}/download_section_pdf/engine/
+        GET /api/v1/inspections/{id}/download_section_pdf/interior/
+        GET /api/v1/inspections/{id}/download_section_pdf/functional/
+        GET /api/v1/inspections/{id}/download_section_pdf/safety/
+        GET /api/v1/inspections/{id}/download_section_pdf/brakes_steering/
+        """
+        inspection = self.get_object()
+        
+        valid_sections = [
+            'health_fitness', 'documentation', 'exterior', 'engine',
+            'interior', 'functional', 'safety', 'brakes_steering'
+        ]
+        
+        if section not in valid_sections:
+            return Response(
+                {
+                    'error': f'Invalid section. Must be one of: {", ".join(valid_sections)}',
+                    'valid_sections': valid_sections
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Generate Section PDF
+            pdf_generator = InspectionPDFGenerator()
+            pdf_file = pdf_generator.generate_section_pdf(inspection.id, section)
+            
+            # Return as download
+            response = HttpResponse(pdf_file, content_type='application/pdf')
+            filename = f'{section}_{inspection.inspection_id}.pdf'
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+            
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to generate PDF: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

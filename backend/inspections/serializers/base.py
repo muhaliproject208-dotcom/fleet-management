@@ -109,6 +109,7 @@ class InspectionDetailSerializer(serializers.ModelSerializer):
     approved_by = UserDetailedSerializer(read_only=True)
     completion_info = serializers.SerializerMethodField()
     post_trip_completion_info = serializers.SerializerMethodField()
+    approved_driving_hours_display = serializers.SerializerMethodField()
     
     class Meta:
         model = PreTripInspection
@@ -118,6 +119,8 @@ class InspectionDetailSerializer(serializers.ModelSerializer):
             'inspection_date',
             'route',
             'approved_driving_hours',
+            'approved_driving_hours_display',
+            'driver_rest_approved',
             'approved_rest_stops',
             'status',
             'driver',
@@ -145,6 +148,20 @@ class InspectionDetailSerializer(serializers.ModelSerializer):
         if obj.status in [InspectionStatus.APPROVED, InspectionStatus.POST_TRIP_IN_PROGRESS]:
             return obj.get_post_trip_completion_status()
         return None
+    
+    def get_approved_driving_hours_display(self, obj):
+        """Get display value for approved driving hours"""
+        hours_value = obj.approved_driving_hours
+        if hours_value:
+            # Parse the stored value (e.g., "6:30") and format for display
+            parts = hours_value.split(':')
+            if len(parts) == 2:
+                hours, mins = parts
+                if mins == '00':
+                    return f"{hours} hours" if int(hours) > 1 else f"{hours} hour"
+                else:
+                    return f"{hours} hrs {mins} mins"
+        return hours_value
 
 
 class InspectionCreateUpdateSerializer(serializers.ModelSerializer):
@@ -161,6 +178,7 @@ class InspectionCreateUpdateSerializer(serializers.ModelSerializer):
             'inspection_date',
             'route',
             'approved_driving_hours',
+            'driver_rest_approved',
             'approved_rest_stops',
             'status',
             'supervisor',

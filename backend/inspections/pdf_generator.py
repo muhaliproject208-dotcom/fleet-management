@@ -25,6 +25,7 @@ from .models import (
     InteriorCabinCheck,
     FunctionalCheck,
     SafetyEquipmentCheck,
+    BrakesSteeringCheck,
     TripBehaviorMonitoring,
     DrivingBehaviorCheck,
     PostTripReport,
@@ -35,6 +36,8 @@ from .models import (
     EvaluationSummary,
     InspectionSignOff,
     PreTripScoreSummary,
+    RiskStatus,
+    SCORE_PER_QUESTION,
 )
 
 
@@ -346,6 +349,9 @@ class InspectionPDFGenerator:
         
         # Safety Equipment
         self._generate_safety_checks(inspection)
+        
+        # Brakes & Steering (Critical)
+        self._generate_brakes_steering_checks(inspection)
     
     def _generate_exterior_checks(self, inspection):
         """Generate exterior checks section"""
@@ -457,13 +463,50 @@ class InspectionPDFGenerator:
         self.story.append(table)
         self.story.append(Spacer(1, 0.2*inch))
     
+    def _generate_brakes_steering_checks(self, inspection):
+        """Generate brakes and steering checks section"""
+        checks = BrakesSteeringCheck.objects.filter(inspection=inspection)
+        if not checks.exists():
+            return
+        
+        section = Paragraph("9. BRAKES & STEERING CHECKS (CRITICAL)", self.styles['SectionHeader'])
+        self.story.append(section)
+        
+        # Add warning banner for critical items
+        warning_data = [['⚠ ALL ITEMS IN THIS SECTION ARE CRITICAL - FAILURES WILL PREVENT TRAVEL CLEARANCE']]
+        warning_table = Table(warning_data, colWidths=[6.5*inch])
+        warning_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#FFF3CD')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#856404')),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        self.story.append(warning_table)
+        self.story.append(Spacer(1, 0.1*inch))
+        
+        data = [['Component', 'Status', 'Remarks']]
+        for check in checks:
+            data.append([
+                self._normalize_field_name(check.check_item),
+                self._get_status_display(check.status),
+                check.remarks or 'N/A'
+            ])
+        
+        table = Table(data, colWidths=[2*inch, 1.5*inch, 3*inch])
+        table.setStyle(self._get_vehicle_check_table_style(len(data)))
+        self.story.append(table)
+        self.story.append(Spacer(1, 0.2*inch))
+    
     def generate_trip_behaviors(self, inspection):
-        """Section 9: Trip Behavior Monitoring"""
+        """Section 10: Trip Behavior Monitoring"""
         behaviors = TripBehaviorMonitoring.objects.filter(inspection=inspection)
         if not behaviors.exists():
             return
         
-        section = Paragraph("9. TRIP BEHAVIOR MONITORING", self.styles['SectionHeader'])
+        section = Paragraph("10. TRIP BEHAVIOR MONITORING", self.styles['SectionHeader'])
         self.story.append(section)
         
         data = [['Behavior Item', 'Status', 'Violation Points', 'Notes']]
@@ -749,14 +792,26 @@ class InspectionPDFGenerator:
         section = Paragraph("PRE-TRIP CHECKLIST SCORE SUMMARY", self.styles['SectionHeader'])
         self.story.append(section)
         
-        # Overall Score Box
+        # Overall Score Box with Risk Status
         score_color = colors.HexColor('#90EE90') if float(score_summary.score_percentage) >= 80 else (
             colors.HexColor('#FFD700') if float(score_summary.score_percentage) >= 60 else colors.HexColor('#FF6B6B')
         )
         
+        # Risk status color mapping
+        risk_colors = {
+            'low_risk': colors.HexColor('#90EE90'),  # Green
+            'moderate_risk': colors.HexColor('#FFD700'),  # Yellow
+            'high_risk': colors.HexColor('#FFA500'),  # Orange
+            'critical_risk': colors.HexColor('#FF6B6B'),  # Red
+        }
+        risk_color = risk_colors.get(score_summary.risk_status, colors.HexColor('#FF6B6B'))
+        
         overall_data = [
-            ['OVERALL PRE-TRIP SCORE', f'{score_summary.total_score} / {score_summary.max_possible_score} ({score_summary.score_percentage}%)'],
+            ['OVERALL PRE-TRIP SCORE', f'{float(score_summary.total_score):.1f} / {float(score_summary.max_possible_score):.1f} ({score_summary.score_percentage}%)'],
+            ['TOTAL QUESTIONS', str(score_summary.total_questions)],
+            ['SCORE PER QUESTION', '1.5 points'],
             ['SCORE LEVEL', score_summary.get_score_level_display()],
+            ['RISK STATUS', score_summary.get_risk_status_display()],
             ['TRAVEL CLEARANCE', 'CLEARED ✓' if score_summary.is_cleared_for_travel else 'NOT CLEARED ⚠'],
         ]
         
@@ -765,9 +820,11 @@ class InspectionPDFGenerator:
             ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#2c5aa0')),
             ('TEXTCOLOR', (0, 0), (0, -1), colors.white),
             ('BACKGROUND', (1, 0), (1, 0), score_color),
-            ('BACKGROUND', (1, 1), (1, 1), colors.HexColor('#f0f0f0')),
-            ('BACKGROUND', (1, 2), (1, 2), colors.HexColor('#90EE90') if score_summary.is_cleared_for_travel else colors.HexColor('#FF6B6B')),
-            ('TEXTCOLOR', (1, 2), (1, 2), colors.HexColor('#166534') if score_summary.is_cleared_for_travel else colors.white),
+            ('BACKGROUND', (1, 1), (1, 2), colors.HexColor('#f0f0f0')),
+            ('BACKGROUND', (1, 3), (1, 3), colors.HexColor('#f0f0f0')),
+            ('BACKGROUND', (1, 4), (1, 4), risk_color),
+            ('BACKGROUND', (1, 5), (1, 5), colors.HexColor('#90EE90') if score_summary.is_cleared_for_travel else colors.HexColor('#FF6B6B')),
+            ('TEXTCOLOR', (1, 5), (1, 5), colors.HexColor('#166534') if score_summary.is_cleared_for_travel else colors.white),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 11),
@@ -779,19 +836,21 @@ class InspectionPDFGenerator:
         self.story.append(overall_table)
         self.story.append(Spacer(1, 0.15*inch))
         
-        # Section Breakdown
+        # Section Breakdown with Subtotals
         section_summary = score_summary.get_section_summary()
-        breakdown_data = [['Section', 'Score', 'Max', 'Percentage']]
+        breakdown_data = [['Section', 'Questions', 'Subtotal', 'Percentage']]
         for section in section_summary:
             pct = section['percentage']
+            subtotal = section.get('subtotal', f"{section['score']}/{section['max']}")
+            questions = section.get('questions', '-')
             breakdown_data.append([
                 section['section'],
-                str(section['score']),
-                str(section['max']),
+                str(questions),
+                subtotal,
                 f"{pct}%"
             ])
         
-        breakdown_table = Table(breakdown_data, colWidths=[2.5*inch, 1.2*inch, 1.2*inch, 1.6*inch])
+        breakdown_table = Table(breakdown_data, colWidths=[2.5*inch, 1.0*inch, 1.5*inch, 1.5*inch])
         breakdown_style = TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c5aa0')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -840,6 +899,213 @@ class InspectionPDFGenerator:
             self.story.append(notes)
         
         self.story.append(Spacer(1, 0.2*inch))
+    
+    def generate_section_pdf(self, inspection_id, section_name):
+        """
+        Generate PDF for a specific section of the pre-trip checklist wizard.
+        This allows generating PDF for each form in the wizard before proceeding to next.
+        
+        Args:
+            inspection_id: ID of the inspection
+            section_name: One of 'health_fitness', 'documentation', 'exterior', 
+                         'engine', 'interior', 'functional', 'safety', 'brakes_steering'
+        
+        Returns:
+            PDF bytes
+        """
+        try:
+            inspection = PreTripInspection.objects.select_related(
+                'driver', 'vehicle', 'supervisor'
+            ).get(id=inspection_id)
+        except PreTripInspection.DoesNotExist:
+            raise ValueError(f"Inspection with ID {inspection_id} not found")
+        
+        # Create PDF buffer
+        buffer = BytesIO()
+        
+        # Set watermark based on status
+        watermark = None
+        if inspection.status == 'draft':
+            watermark = 'DRAFT'
+        
+        def create_canvas(*args, **kwargs):
+            c = NumberedCanvas(*args, **kwargs)
+            c.watermark_text = watermark
+            return c
+        
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=letter,
+            rightMargin=0.75*inch,
+            leftMargin=0.75*inch,
+            topMargin=0.75*inch,
+            bottomMargin=0.75*inch
+        )
+        
+        # Build story for specific section
+        self.story = []
+        
+        # Add header
+        self._generate_section_header(inspection, section_name)
+        
+        # Generate appropriate section
+        section_mapping = {
+            'health_fitness': self.generate_health_fitness,
+            'documentation': self.generate_documentation,
+            'exterior': self._generate_exterior_checks,
+            'engine': self._generate_engine_checks,
+            'interior': self._generate_interior_checks,
+            'functional': self._generate_functional_checks,
+            'safety': self._generate_safety_checks,
+            'brakes_steering': self._generate_brakes_steering_checks,
+        }
+        
+        if section_name not in section_mapping:
+            raise ValueError(f"Invalid section name: {section_name}")
+        
+        # Generate the section content
+        section_mapping[section_name](inspection)
+        
+        # Add section score summary
+        self._generate_section_score_summary(inspection, section_name)
+        
+        # Build PDF
+        doc.build(self.story, canvasmaker=create_canvas)
+        
+        pdf = buffer.getvalue()
+        buffer.close()
+        
+        return pdf
+    
+    def _generate_section_header(self, inspection, section_name):
+        """Generate header for individual section PDF"""
+        section_titles = {
+            'health_fitness': 'Health & Fitness Check',
+            'documentation': 'Documentation & Compliance',
+            'exterior': 'Vehicle Exterior Checks',
+            'engine': 'Engine & Fluid Checks',
+            'interior': 'Interior & Cabin Checks',
+            'functional': 'Functional Checks',
+            'safety': 'Safety Equipment Checks',
+            'brakes_steering': 'Brakes & Steering Checks',
+        }
+        
+        title = Paragraph(
+            f"PRE-TRIP CHECKLIST - {section_titles.get(section_name, section_name).upper()}", 
+            self.styles['CustomTitle']
+        )
+        self.story.append(title)
+        
+        # Basic inspection info
+        info_data = [
+            ['Inspection ID:', inspection.inspection_id, 'Date:', inspection.inspection_date.strftime('%Y-%m-%d')],
+            ['Driver:', inspection.driver.full_name, 'Vehicle:', inspection.vehicle.registration_number],
+        ]
+        
+        info_table = Table(info_data, colWidths=[1.5*inch, 2*inch, 1.2*inch, 1.8*inch])
+        info_table.setStyle(TableStyle([
+            ('FONT', (0, 0), (-1, -1), 'Helvetica', 9),
+            ('FONT', (0, 0), (0, -1), 'Helvetica-Bold', 9),
+            ('FONT', (2, 0), (2, -1), 'Helvetica-Bold', 9),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ]))
+        
+        self.story.append(info_table)
+        self.story.append(Spacer(1, 0.3*inch))
+    
+    def _generate_section_score_summary(self, inspection, section_name):
+        """Generate score summary for individual section"""
+        try:
+            score_summary, _ = PreTripScoreSummary.objects.get_or_create(inspection=inspection)
+            score_summary.save()  # Recalculate scores
+        except Exception:
+            return
+        
+        # Map section names to score fields
+        score_mapping = {
+            'health_fitness': ('health_fitness_score', 'health_fitness_max', 'health_fitness_questions'),
+            'documentation': ('documentation_score', 'documentation_max', 'documentation_questions'),
+            'exterior': ('vehicle_exterior_score', 'vehicle_exterior_max', 'vehicle_exterior_questions'),
+            'engine': ('engine_fluid_score', 'engine_fluid_max', 'engine_fluid_questions'),
+            'interior': ('interior_cabin_score', 'interior_cabin_max', 'interior_cabin_questions'),
+            'functional': ('functional_score', 'functional_max', 'functional_questions'),
+            'safety': ('safety_equipment_score', 'safety_equipment_max', 'safety_equipment_questions'),
+            'brakes_steering': ('brakes_steering_score', 'brakes_steering_max', 'brakes_steering_questions'),
+        }
+        
+        if section_name not in score_mapping:
+            return
+        
+        score_field, max_field, questions_field = score_mapping[section_name]
+        score = float(getattr(score_summary, score_field, 0))
+        max_score = float(getattr(score_summary, max_field, 0))
+        questions = getattr(score_summary, questions_field, 0)
+        
+        if max_score > 0:
+            percentage = round((score / max_score) * 100, 1)
+        else:
+            percentage = 0
+        
+        self.story.append(Spacer(1, 0.2*inch))
+        
+        # Section score box
+        section_title = Paragraph("<b>SECTION SCORE SUMMARY</b>", self.styles['SubSection'])
+        self.story.append(section_title)
+        self.story.append(Spacer(1, 0.1*inch))
+        
+        score_color = colors.HexColor('#90EE90') if percentage >= 80 else (
+            colors.HexColor('#FFD700') if percentage >= 60 else colors.HexColor('#FF6B6B')
+        )
+        
+        score_data = [
+            ['Questions', 'Score Per Question', 'Section Score', 'Percentage'],
+            [str(questions), '1.5 points', f'{score:.1f} / {max_score:.1f}', f'{percentage}%']
+        ]
+        
+        score_table = Table(score_data, colWidths=[1.5*inch, 1.5*inch, 2*inch, 1.5*inch])
+        score_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c5aa0')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('BACKGROUND', (3, 1), (3, 1), score_color),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        
+        self.story.append(score_table)
+        
+        # Risk indicator based on section percentage
+        if percentage >= 90:
+            risk_text = 'LOW RISK'
+            risk_color = colors.HexColor('#90EE90')
+        elif percentage >= 75:
+            risk_text = 'MODERATE RISK'
+            risk_color = colors.HexColor('#FFD700')
+        elif percentage >= 60:
+            risk_text = 'HIGH RISK'
+            risk_color = colors.HexColor('#FFA500')
+        else:
+            risk_text = 'CRITICAL RISK'
+            risk_color = colors.HexColor('#FF6B6B')
+        
+        self.story.append(Spacer(1, 0.1*inch))
+        
+        risk_data = [[f'Section Risk Status: {risk_text}']]
+        risk_table = Table(risk_data, colWidths=[6.5*inch])
+        risk_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), risk_color),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ]))
+        
+        self.story.append(risk_table)
     
     def generate_full_report(self, inspection_id):
         """Generate complete PDF report for an inspection"""

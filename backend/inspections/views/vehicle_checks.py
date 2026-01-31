@@ -12,6 +12,7 @@ from ..models import (
     InteriorCabinCheck,
     FunctionalCheck,
     SafetyEquipmentCheck,
+    BrakesSteeringCheck,
 )
 from ..serializers import (
     VehicleExteriorCheckSerializer,
@@ -19,6 +20,7 @@ from ..serializers import (
     InteriorCabinCheckSerializer,
     FunctionalCheckSerializer,
     SafetyEquipmentCheckSerializer,
+    BrakesSteeringCheckSerializer,
 )
 
 
@@ -213,3 +215,8 @@ class FunctionalCheckViewSet(BaseVehicleCheckViewSet):
 class SafetyEquipmentCheckViewSet(BaseVehicleCheckViewSet):
     """ViewSet for Safety Equipment Checks"""
     serializer_class = SafetyEquipmentCheckSerializer
+
+
+class BrakesSteeringCheckViewSet(BaseVehicleCheckViewSet):
+    """ViewSet for Brakes & Steering Checks"""
+    serializer_class = BrakesSteeringCheckSerializer

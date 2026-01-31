@@ -60,6 +60,34 @@ const SAFETY_CHECK_MAP: Record<string, string> = {
   'GPS Tracker Operational': 'gps_tracker',
 };
 
+const BRAKES_STEERING_CHECK_MAP: Record<string, string> = {
+  'Brakes Condition (overall condition)': 'brakes_condition',
+  'Brake Pads (wear level)': 'brake_pads',
+  'Brake Fluid Level': 'brake_fluid_level',
+  'Brake Lines (leaks, damage)': 'brake_lines',
+  'Handbrake (operation)': 'handbrake',
+  'Steering Wheel (play, damage)': 'steering_wheel',
+  'Steering Response': 'steering_response',
+  'Power Steering (operation)': 'power_steering',
+  'Steering Fluid (level)': 'steering_fluid',
+};
+
+// Generate driving hours choices (1-24 hours in 15-min intervals)
+const DRIVING_HOURS_CHOICES: Array<{ value: string; label: string }> = [];
+for (let hours = 1; hours <= 24; hours++) {
+  for (let minutes = 0; minutes < 60; minutes += 15) {
+    if (hours === 24 && minutes > 0) break;
+    const totalMinutes = hours * 60 + minutes;
+    const displayHours = Math.floor(totalMinutes / 60);
+    const displayMins = totalMinutes % 60;
+    const label = displayMins > 0 
+      ? `${displayHours} hr${displayHours > 1 ? 's' : ''} ${displayMins} min`
+      : `${displayHours} hr${displayHours > 1 ? 's' : ''}`;
+    const value = `${displayHours}:${displayMins.toString().padStart(2, '0')}`;
+    DRIVING_HOURS_CHOICES.push({ value, label });
+  }
+}
+
 interface InspectionFormData {
   driver: string;
   vehicle: string;
@@ -68,6 +96,7 @@ interface InspectionFormData {
   route: string;
   approved_driving_hours: string;
   approved_rest_stops: number;
+  driver_rest_approved: boolean | null;
   
   adequate_rest: boolean | null;
   alcohol_test_status: 'pass' | 'fail' | '';
@@ -82,6 +111,7 @@ interface InspectionFormData {
   fatigue_remarks: string;
   
   certificate_of_fitness: 'valid' | 'invalid' | '';
+  certificate_of_fitness_valid: 'yes' | 'no' | '';
   road_tax_valid: boolean | null;
   insurance_valid: boolean | null;
   trip_authorization_signed: boolean | null;
@@ -92,15 +122,19 @@ interface InspectionFormData {
   route_familiarity: boolean | null;
   emergency_procedures_known: boolean | null;
   gps_activated: boolean | null;
-  safety_briefing_provided: boolean | null;
-  rtsa_clearance: boolean | null;
+  safety_briefing_provided: 'yes' | 'no' | '';
+  rtsa_clearance: 'yes' | 'no' | '';
   emergency_contact: string;
+  emergency_contact_employer: string;
+  emergency_contact_government: string;
+  time_briefing_conducted: string;
   
   exterior_checks: Array<{ item: string; status: 'pass' | 'fail' | null; remarks: string }>;
   engine_checks: Array<{ item: string; status: 'pass' | 'fail' | null; remarks: string }>;
   interior_checks: Array<{ item: string; status: 'pass' | 'fail' | null; remarks: string }>;
   functional_checks: Array<{ item: string; status: 'pass' | 'fail' | null; remarks: string }>;
   safety_checks: Array<{ item: string; status: 'pass' | 'fail' | null; remarks: string }>;
+  brakes_steering_checks: Array<{ item: string; status: 'pass' | 'fail' | null; remarks: string }>;
   
   all_defects_rectified: boolean | null;
   defects_remarks: string;
@@ -110,7 +144,7 @@ interface InspectionFormData {
   ready_remarks: string;
 }
 
-const TOTAL_STEPS = 9;
+const TOTAL_STEPS = 10;
 
 export default function NewInspectionWizard() {
   const router = useRouter();
@@ -131,6 +165,7 @@ export default function NewInspectionWizard() {
     interior: false,
     functional: false,
     safety: false,
+    brakes_steering: false,
   });
   
   // Track IDs for OneToOne relationships (needed for updates)
@@ -156,6 +191,7 @@ export default function NewInspectionWizard() {
     route: '',
     approved_driving_hours: '',
     approved_rest_stops: 0,
+    driver_rest_approved: null,
     
     adequate_rest: null,
     alcohol_test_status: '',
@@ -170,6 +206,7 @@ export default function NewInspectionWizard() {
     fatigue_remarks: '',
     
     certificate_of_fitness: '',
+    certificate_of_fitness_valid: '',
     road_tax_valid: null,
     insurance_valid: null,
     trip_authorization_signed: null,
@@ -180,9 +217,12 @@ export default function NewInspectionWizard() {
     route_familiarity: null,
     emergency_procedures_known: null,
     gps_activated: null,
-    safety_briefing_provided: null,
-    rtsa_clearance: null,
+    safety_briefing_provided: '',
+    rtsa_clearance: '',
     emergency_contact: '',
+    emergency_contact_employer: '',
+    emergency_contact_government: '',
+    time_briefing_conducted: '',
     
     exterior_checks: [
       { item: 'Tires (inflation, tread depth, damage)', status: null, remarks: '' },
@@ -228,6 +268,18 @@ export default function NewInspectionWizard() {
       { item: 'Torch/Flashlight', status: null, remarks: '' },
       { item: 'Emergency Contact List', status: null, remarks: '' },
       { item: 'GPS Tracker Operational', status: null, remarks: '' },
+    ],
+    
+    brakes_steering_checks: [
+      { item: 'Brakes Condition (overall condition)', status: null, remarks: '' },
+      { item: 'Brake Pads (wear level)', status: null, remarks: '' },
+      { item: 'Brake Fluid Level', status: null, remarks: '' },
+      { item: 'Brake Lines (leaks, damage)', status: null, remarks: '' },
+      { item: 'Handbrake (operation)', status: null, remarks: '' },
+      { item: 'Steering Wheel (play, damage)', status: null, remarks: '' },
+      { item: 'Steering Response', status: null, remarks: '' },
+      { item: 'Power Steering (operation)', status: null, remarks: '' },
+      { item: 'Steering Fluid (level)', status: null, remarks: '' },
     ],
     
     all_defects_rectified: null,
@@ -441,8 +493,8 @@ export default function NewInspectionWizard() {
             formData.logbook_present === null || formData.driver_handbook_present === null ||
             formData.permits_valid === null || formData.ppe_available === null ||
             formData.route_familiarity === null || formData.emergency_procedures_known === null ||
-            formData.gps_activated === null || formData.safety_briefing_provided === null ||
-            formData.rtsa_clearance === null || !formData.emergency_contact.trim()) {
+            formData.gps_activated === null || !formData.safety_briefing_provided ||
+            !formData.rtsa_clearance || !formData.emergency_contact.trim()) {
           setError('Please complete all documentation checks');
           return false;
         }
@@ -478,6 +530,12 @@ export default function NewInspectionWizard() {
         }
         break;
       case 9:
+        if (!formData.brakes_steering_checks.every(c => c.status !== null)) {
+          setError('Please complete all brakes & steering checks');
+          return false;
+        }
+        break;
+      case 10:
         if (formData.all_defects_rectified === null || formData.driver_briefed === null || 
             formData.vehicle_ready === null) {
           setError('Please complete all final verification questions');
@@ -701,6 +759,7 @@ export default function NewInspectionWizard() {
         const docData = {
           inspection: inspectionId,
           certificate_of_fitness: formData.certificate_of_fitness,
+          certificate_of_fitness_valid: formData.certificate_of_fitness_valid,
           road_tax_valid: formData.road_tax_valid,
           insurance_valid: formData.insurance_valid,
           trip_authorization_signed: formData.trip_authorization_signed,
@@ -714,6 +773,9 @@ export default function NewInspectionWizard() {
           safety_briefing_provided: formData.safety_briefing_provided,
           rtsa_clearance: formData.rtsa_clearance,
           emergency_contact: formData.emergency_contact,
+          emergency_contact_employer: formData.emergency_contact_employer,
+          emergency_contact_government: formData.emergency_contact_government,
+          time_briefing_conducted: formData.time_briefing_conducted || null,
         };
 
         // Use PATCH with ID for updates, POST for create
@@ -980,6 +1042,53 @@ export default function NewInspectionWizard() {
         break;
       }
 
+      case 9: {
+        // Save or delete/recreate brakes & steering checks
+        if (!inspectionId) throw new Error('Inspection not created yet');
+        
+        // If already saved, delete all existing checks first
+        if (savedSections.brakes_steering) {
+          const existingChecks = await fetch(
+            `${API_URL}/inspections/${inspectionId}/brakes-steering-checks/`,
+            { headers }
+          );
+          if (existingChecks.ok) {
+            const checks = await existingChecks.json();
+            for (const check of checks) {
+              await fetch(
+                `${API_URL}/inspections/${inspectionId}/brakes-steering-checks/${check.id}/`,
+                { method: 'DELETE', headers }
+              );
+            }
+          }
+        }
+        
+        // Create new checks
+        for (const check of formData.brakes_steering_checks) {
+          if (check.status) {
+            const checkKey = BRAKES_STEERING_CHECK_MAP[check.item];
+            if (!checkKey) {
+              console.error('Unknown brakes/steering check item:', check.item);
+              continue;
+            }
+            await fetch(`${API_URL}/inspections/${inspectionId}/brakes-steering-checks/`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({
+                inspection: inspectionId,
+                check_item: checkKey,
+                status: check.status,
+                remarks: check.remarks,
+              }),
+            });
+          }
+        }
+        
+        setSavedSections(prev => ({ ...prev, brakes_steering: true }));
+        setSuccess('Brakes & Steering checks saved!');
+        break;
+      }
+
       default:
         break;
     }
@@ -1063,6 +1172,68 @@ export default function NewInspectionWizard() {
     }
   };
 
+  // Section names mapping for PDF download
+  const SECTION_NAMES: Record<number, string> = {
+    2: 'health_fitness',
+    3: 'documentation',
+    4: 'exterior',
+    5: 'engine',
+    6: 'interior',
+    7: 'functional',
+    8: 'safety',
+    9: 'brakes_steering',
+  };
+
+  const downloadSectionPdf = async (step: number) => {
+    if (!inspectionId) {
+      setError('Inspection not saved yet. Please save first.');
+      return;
+    }
+    
+    const sectionName = SECTION_NAMES[step];
+    if (!sectionName) {
+      setError('PDF download not available for this section');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('access_token');
+      
+      const response = await fetch(
+        `${API_URL}/inspections/${inspectionId}/download_section_pdf/${sectionName}/`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to download PDF');
+      }
+      
+      // Get the blob and download it
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${getFormTitle().replace(/\s+/g, '_')}_${inspectionId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      setSuccess('PDF downloaded successfully!');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(getFriendlyErrorMessage(errorMessage));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getFormTitle = () => {
     const titles = [
       'Basic Information',
@@ -1073,10 +1244,40 @@ export default function NewInspectionWizard() {
       'Interior & Cabin Check',
       'Functional Checks',
       'Safety Equipment Check',
+      'Brakes & Steering Check',
       'Final Verification'
     ];
     return titles[currentStep - 1];
   };
+
+  // Render section header with optional PDF download button
+  const renderSectionHeader = (showDownload: boolean = false) => (
+    <div style={{ 
+      display: 'flex', 
+      justifyContent: 'space-between', 
+      alignItems: 'center', 
+      marginBottom: '20px' 
+    }}>
+      <h2 style={{ color: '#000', margin: 0 }}>{getFormTitle()}</h2>
+      {showDownload && inspectionId && (
+        <button
+          onClick={() => downloadSectionPdf(currentStep)}
+          disabled={loading}
+          className="button-secondary"
+          style={{ 
+            width: 'auto', 
+            padding: '8px 16px', 
+            fontSize: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
+        >
+          <span>📄</span> Download PDF
+        </button>
+      )}
+    </div>
+  );
 
   const renderForm = () => {
     switch (currentStep) {
@@ -1149,13 +1350,16 @@ export default function NewInspectionWizard() {
             
             <div style={{ marginBottom: '20px' }}>
               <label className="label">Approved Driving Hours *</label>
-              <input
-                type="text"
+              <select
                 className="input"
-                placeholder="e.g., 6 hrs 50 mins"
                 value={formData.approved_driving_hours}
                 onChange={(e) => setFormData({ ...formData, approved_driving_hours: e.target.value })}
-              />
+              >
+                <option value="">Select Driving Hours</option>
+                {DRIVING_HOURS_CHOICES.map(choice => (
+                  <option key={choice.value} value={choice.value}>{choice.label}</option>
+                ))}
+              </select>
             </div>
             
             <div style={{ marginBottom: '20px' }}>
@@ -1168,15 +1372,35 @@ export default function NewInspectionWizard() {
                 onChange={(e) => setFormData({ ...formData, approved_rest_stops: parseInt(e.target.value) || 0 })}
               />
             </div>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontWeight: '600', color: '#000', marginBottom: '10px' }}>
+                Driver Rest Approved *
+              </label>
+              <div style={{ display: 'flex', gap: '15px' }}>
+                <RadioOption
+                  label="Yes"
+                  value="yes"
+                  selected={formData.driver_rest_approved === true}
+                  onChange={() => setFormData({ ...formData, driver_rest_approved: true })}
+                />
+                <RadioOption
+                  label="No"
+                  value="no"
+                  selected={formData.driver_rest_approved === false}
+                  onChange={() => setFormData({ ...formData, driver_rest_approved: false })}
+                />
+              </div>
+            </div>
           </div>
         );
         
       case 2:
         return (
           <div>
-            <h2 style={{ color: '#000', marginBottom: '20px' }}>{getFormTitle()}</h2>
+            {renderSectionHeader(true)}
             
-            {/* CRITICAL: Rest/Fatigue Clearance - Must be first and prominent */}
+            {/* CRITICAL: Rest/Fatigue Clearance - Must be first and prominent */
             <div style={{ 
               marginBottom: '30px', 
               padding: '20px', 
@@ -1430,7 +1654,7 @@ export default function NewInspectionWizard() {
       case 3:
         return (
           <div>
-            <h2 style={{ color: '#000', marginBottom: '20px' }}>{getFormTitle()}</h2>
+            {renderSectionHeader(true)}
             
             <div style={{ marginBottom: '25px' }}>
               <label style={{ display: 'block', fontWeight: '600', color: '#000', marginBottom: '10px' }}>
@@ -1451,6 +1675,26 @@ export default function NewInspectionWizard() {
                 />
               </div>
             </div>
+            
+            <div style={{ marginBottom: '25px' }}>
+              <label style={{ display: 'block', fontWeight: '600', color: '#000', marginBottom: '10px' }}>
+                Certificate of Fitness Valid *
+              </label>
+              <div style={{ display: 'flex', gap: '15px' }}>
+                <RadioOption
+                  label="Yes"
+                  value="yes"
+                  selected={formData.certificate_of_fitness_valid === 'yes'}
+                  onChange={() => setFormData({ ...formData, certificate_of_fitness_valid: 'yes' })}
+                />
+                <RadioOption
+                  label="No"
+                  value="no"
+                  selected={formData.certificate_of_fitness_valid === 'no'}
+                  onChange={() => setFormData({ ...formData, certificate_of_fitness_valid: 'no' })}
+                />
+              </div>
+            </div>
 
             {[
               { key: 'road_tax_valid', label: 'Road Tax Valid' },
@@ -1463,8 +1707,6 @@ export default function NewInspectionWizard() {
               { key: 'route_familiarity', label: 'Route Familiarity' },
               { key: 'emergency_procedures_known', label: 'Emergency Procedures Known' },
               { key: 'gps_activated', label: 'GPS Activated' },
-              { key: 'safety_briefing_provided', label: 'Safety Briefing Provided' },
-              { key: 'rtsa_clearance', label: 'RTSA Clearance' },
             ].map(({ key, label }) => (
               <div key={key} style={{ marginBottom: '25px' }}>
                 <label style={{ display: 'block', fontWeight: '600', color: '#000', marginBottom: '10px' }}>
@@ -1486,9 +1728,59 @@ export default function NewInspectionWizard() {
                 </div>
               </div>
             ))}
+            
+            <div style={{ marginBottom: '25px' }}>
+              <label style={{ display: 'block', fontWeight: '600', color: '#000', marginBottom: '10px' }}>
+                Safety Briefing Provided *
+              </label>
+              <div style={{ display: 'flex', gap: '15px' }}>
+                <RadioOption
+                  label="Yes"
+                  value="yes"
+                  selected={formData.safety_briefing_provided === 'yes'}
+                  onChange={() => setFormData({ ...formData, safety_briefing_provided: 'yes' })}
+                />
+                <RadioOption
+                  label="No"
+                  value="no"
+                  selected={formData.safety_briefing_provided === 'no'}
+                  onChange={() => setFormData({ ...formData, safety_briefing_provided: 'no' })}
+                />
+              </div>
+            </div>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <label className="label">Time Briefing Conducted</label>
+              <input
+                type="time"
+                className="input"
+                value={formData.time_briefing_conducted}
+                onChange={(e) => setFormData({ ...formData, time_briefing_conducted: e.target.value })}
+              />
+            </div>
+            
+            <div style={{ marginBottom: '25px' }}>
+              <label style={{ display: 'block', fontWeight: '600', color: '#000', marginBottom: '10px' }}>
+                RTSA Clearance *
+              </label>
+              <div style={{ display: 'flex', gap: '15px' }}>
+                <RadioOption
+                  label="Yes"
+                  value="yes"
+                  selected={formData.rtsa_clearance === 'yes'}
+                  onChange={() => setFormData({ ...formData, rtsa_clearance: 'yes' })}
+                />
+                <RadioOption
+                  label="No"
+                  value="no"
+                  selected={formData.rtsa_clearance === 'no'}
+                  onChange={() => setFormData({ ...formData, rtsa_clearance: 'no' })}
+                />
+              </div>
+            </div>
 
             <div style={{ marginBottom: '20px' }}>
-              <label className="label">Emergency Contact *</label>
+              <label className="label">Emergency Contact (General) *</label>
               <input
                 type="text"
                 className="input"
@@ -1497,13 +1789,35 @@ export default function NewInspectionWizard() {
                 onChange={(e) => setFormData({ ...formData, emergency_contact: e.target.value })}
               />
             </div>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <label className="label">Emergency Contact (Employer)</label>
+              <input
+                type="text"
+                className="input"
+                placeholder="Employer name and phone number"
+                value={formData.emergency_contact_employer}
+                onChange={(e) => setFormData({ ...formData, emergency_contact_employer: e.target.value })}
+              />
+            </div>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <label className="label">Emergency Contact (Government)</label>
+              <input
+                type="text"
+                className="input"
+                placeholder="Government contact name and phone number"
+                value={formData.emergency_contact_government}
+                onChange={(e) => setFormData({ ...formData, emergency_contact_government: e.target.value })}
+              />
+            </div>
           </div>
         );
 
       case 4:
         return (
           <div>
-            <h2 style={{ color: '#000', marginBottom: '20px' }}>{getFormTitle()}</h2>
+            {renderSectionHeader(true)}
             {formData.exterior_checks.map((check, index) => (
               <CheckItem
                 key={index}
@@ -1528,7 +1842,7 @@ export default function NewInspectionWizard() {
       case 5:
         return (
           <div>
-            <h2 style={{ color: '#000', marginBottom: '20px' }}>{getFormTitle()}</h2>
+            {renderSectionHeader(true)}
             {formData.engine_checks.map((check, index) => (
               <CheckItem
                 key={index}
@@ -1553,7 +1867,7 @@ export default function NewInspectionWizard() {
       case 6:
         return (
           <div>
-            <h2 style={{ color: '#000', marginBottom: '20px' }}>{getFormTitle()}</h2>
+            {renderSectionHeader(true)}
             {formData.interior_checks.map((check, index) => (
               <CheckItem
                 key={index}
@@ -1578,7 +1892,7 @@ export default function NewInspectionWizard() {
       case 7:
         return (
           <div>
-            <h2 style={{ color: '#000', marginBottom: '20px' }}>{getFormTitle()}</h2>
+            {renderSectionHeader(true)}
             {formData.functional_checks.map((check, index) => (
               <CheckItem
                 key={index}
@@ -1603,7 +1917,7 @@ export default function NewInspectionWizard() {
       case 8:
         return (
           <div>
-            <h2 style={{ color: '#000', marginBottom: '20px' }}>{getFormTitle()}</h2>
+            {renderSectionHeader(true)}
             {formData.safety_checks.map((check, index) => (
               <CheckItem
                 key={index}
@@ -1626,6 +1940,42 @@ export default function NewInspectionWizard() {
         );
 
       case 9:
+        return (
+          <div>
+            {renderSectionHeader(true)}
+            <div style={{ 
+              marginBottom: '20px', 
+              padding: '15px', 
+              backgroundColor: '#fef3c7', 
+              borderRadius: '8px',
+              border: '1px solid #f59e0b'
+            }}>
+              <p style={{ margin: 0, color: '#92400e', fontWeight: '500' }}>
+                ⚠️ Critical Safety Checks - Any failure here will prevent vehicle clearance
+              </p>
+            </div>
+            {formData.brakes_steering_checks.map((check, index) => (
+              <CheckItem
+                key={index}
+                label={check.item}
+                status={check.status}
+                remarks={check.remarks}
+                onStatusChange={(status) => {
+                  const updated = [...formData.brakes_steering_checks];
+                  updated[index].status = status;
+                  setFormData({ ...formData, brakes_steering_checks: updated });
+                }}
+                onRemarksChange={(remarks) => {
+                  const updated = [...formData.brakes_steering_checks];
+                  updated[index].remarks = remarks;
+                  setFormData({ ...formData, brakes_steering_checks: updated });
+                }}
+              />
+            ))}
+          </div>
+        );
+
+      case 10:
         return (
           <div>
             <h2 style={{ color: '#000', marginBottom: '20px' }}>{getFormTitle()}</h2>

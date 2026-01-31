@@ -10,7 +10,17 @@ class DocumentationComplianceSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'inspection',
+            # New Yes/No fields
+            'certificate_of_fitness_valid',
+            'safety_briefing_provided',
+            'time_briefing_conducted',
+            'rtsa_clearance',
+            'emergency_contact_employer',
+            'emergency_contact_government',
+            # Legacy fields for backward compatibility
             'certificate_of_fitness',
+            'emergency_contact',
+            # Existing boolean fields
             'road_tax_valid',
             'insurance_valid',
             'trip_authorization_signed',
@@ -21,9 +31,6 @@ class DocumentationComplianceSerializer(serializers.ModelSerializer):
             'route_familiarity',
             'emergency_procedures_known',
             'gps_activated',
-            'safety_briefing_provided',
-            'rtsa_clearance',
-            'emergency_contact',
             'created_at',
             'updated_at'
         ]
@@ -32,8 +39,10 @@ class DocumentationComplianceSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         """Validate that all required documents are provided"""
         # Get values from attrs or instance if updating
+        cert_fitness_valid = attrs.get('certificate_of_fitness_valid')
         cert_fitness = attrs.get('certificate_of_fitness')
-        if not cert_fitness and self.instance:
+        if not cert_fitness_valid and not cert_fitness and self.instance:
+            cert_fitness_valid = self.instance.certificate_of_fitness_valid
             cert_fitness = self.instance.certificate_of_fitness
         
         road_tax = attrs.get('road_tax_valid')
@@ -55,7 +64,9 @@ class DocumentationComplianceSerializer(serializers.ModelSerializer):
         # Validate required documents
         missing = []
         
-        if cert_fitness != 'valid':
+        # Check certificate of fitness (either new or legacy field)
+        cert_ok = cert_fitness_valid == 'yes' or cert_fitness == 'valid'
+        if not cert_ok:
             missing.append('Certificate of Fitness must be valid')
         if not road_tax:
             missing.append('Road Tax must be valid')

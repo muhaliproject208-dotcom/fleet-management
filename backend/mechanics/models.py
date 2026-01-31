@@ -3,6 +3,18 @@ from django.core.exceptions import ValidationError
 from django.conf import settings
 
 
+class CertificationStatus(models.TextChoices):
+    """Status choices for mechanic certification"""
+    CERTIFIED = 'certified', 'Certified'
+    NOT_CERTIFIED = 'not_certified', 'Not Certified'
+
+
+class ServiceType(models.TextChoices):
+    """Service type choices for vehicle maintenance"""
+    FULL_SERVICE = 'full_service', 'Full Service'
+    PARTIAL_SERVICE = 'partial_service', 'Partial Service'
+
+
 class Mechanic(models.Model):
     """
     Mechanic model for fleet management system.
@@ -25,6 +37,34 @@ class Mechanic(models.Model):
         max_length=20,
         help_text="Phone number with country code (e.g., +260977654321)"
     )
+    
+    # Certification Status
+    certification_status = models.CharField(
+        max_length=20,
+        choices=CertificationStatus.choices,
+        default=CertificationStatus.NOT_CERTIFIED,
+        help_text="Certification status of the mechanic"
+    )
+    
+    # Last maintenance date (based on trip)
+    last_vehicle_maintenance_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Last date the mechanic performed vehicle maintenance based on trip"
+    )
+    
+    # Last servicing date (Manufacturing Mileage based)
+    last_full_service_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Last date of full service based on manufacturing mileage"
+    )
+    last_partial_service_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Last date of partial service based on manufacturing mileage"
+    )
+    
     is_active = models.BooleanField(
         default=True,
         db_index=True,

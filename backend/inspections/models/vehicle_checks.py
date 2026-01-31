@@ -238,3 +238,48 @@ class SafetyEquipmentCheck(BaseVehicleCheck):
 
 
 SafetyEquipmentCheck._meta.get_field('inspection').remote_field.related_name = 'safety_equipment_checks'
+
+
+class BrakesSteeringCheck(BaseVehicleCheck):
+    """
+    Brakes and Steering inspection checks - Critical safety items.
+    Separate model to ensure these critical checks are always visible and tracked.
+    """
+    
+    inspection = models.ForeignKey(
+        PreTripInspection,
+        on_delete=models.CASCADE,
+        related_name='brakes_steering_checks',
+        help_text="Associated pre-trip inspection"
+    )
+    
+    class BrakesSteeringItems(models.TextChoices):
+        BRAKES_CONDITION = 'brakes_condition', 'Brakes Condition'
+        BRAKE_PADS = 'brake_pads', 'Brake Pads'
+        BRAKE_FLUID_LEVEL = 'brake_fluid_level', 'Brake Fluid Level'
+        BRAKE_LINES = 'brake_lines', 'Brake Lines'
+        HANDBRAKE = 'handbrake', 'Handbrake/Parking Brake'
+        STEERING_WHEEL = 'steering_wheel', 'Steering Wheel'
+        STEERING_RESPONSE = 'steering_response', 'Steering Response'
+        POWER_STEERING = 'power_steering', 'Power Steering'
+        STEERING_FLUID = 'steering_fluid', 'Steering Fluid Level'
+    
+    class Meta:
+        verbose_name = 'Brakes & Steering Check'
+        verbose_name_plural = 'Brakes & Steering Checks'
+        ordering = ['-created_at']
+    
+    def has_critical_failure(self):
+        """All brakes and steering items are critical"""
+        return self.status == CheckStatus.FAIL
+    
+    def clean(self):
+        """Validate check_item is valid for brakes/steering checks"""
+        super().clean()
+        if self.check_item not in self.BrakesSteeringItems.values:
+            raise ValidationError({
+                'check_item': f'Invalid brakes/steering check item. Must be one of: {", ".join(self.BrakesSteeringItems.values)}'
+            })
+
+
+BrakesSteeringCheck._meta.get_field('inspection').remote_field.related_name = 'brakes_steering_checks'
