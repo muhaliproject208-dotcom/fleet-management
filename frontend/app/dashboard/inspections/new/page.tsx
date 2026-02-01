@@ -296,18 +296,18 @@ export default function NewInspectionWizard() {
     
     switch (currentStep) {
       case 2: {
-        // Health & Fitness - count passed questions
-        const healthQuestions = [
-          formData.adequate_rest === true,
-          formData.alcohol_test_status === 'pass',
-          formData.temperature_check_status === 'pass',
-          formData.fit_for_duty === true,
-          formData.medication_status === false, // No medication is good
-          formData.no_health_impairment === true,
-          formData.fatigue_checklist_completed === true,
+        // Health & Fitness - track answered vs passed
+        const healthAnswers = [
+          { answered: formData.adequate_rest !== null, passed: formData.adequate_rest === true },
+          { answered: formData.alcohol_test_status !== '', passed: formData.alcohol_test_status === 'pass' },
+          { answered: formData.temperature_check_status !== '', passed: formData.temperature_check_status === 'pass' },
+          { answered: formData.fit_for_duty !== null, passed: formData.fit_for_duty === true },
+          { answered: formData.medication_status !== null, passed: formData.medication_status === false }, // No medication is good
+          { answered: formData.no_health_impairment !== null, passed: formData.no_health_impairment === true },
+          { answered: formData.fatigue_checklist_completed !== null, passed: formData.fatigue_checklist_completed === true },
         ];
-        const answered = healthQuestions.filter(q => q !== null && q !== undefined).length;
-        const passed = healthQuestions.filter(q => q === true).length;
+        const answered = healthAnswers.filter(q => q.answered).length;
+        const passed = healthAnswers.filter(q => q.answered && q.passed).length;
         return {
           earned: passed * POINTS_PER_QUESTION,
           possible: 7 * POINTS_PER_QUESTION,
@@ -319,25 +319,25 @@ export default function NewInspectionWizard() {
       
       case 3: {
         // Documentation & Compliance
-        const docQuestions = [
-          formData.certificate_of_fitness === 'valid',
-          formData.certificate_of_fitness_valid === 'yes',
-          formData.road_tax_valid === true,
-          formData.insurance_valid === true,
-          formData.trip_authorization_signed === true,
-          formData.logbook_present === true,
-          formData.driver_handbook_present === true,
-          formData.permits_valid === true,
-          formData.ppe_available === true,
-          formData.route_familiarity === true,
-          formData.emergency_procedures_known === true,
-          formData.gps_activated === true,
-          formData.safety_briefing_provided === 'yes',
-          formData.rtsa_clearance === 'yes',
-          formData.emergency_contact?.trim().length > 0,
+        const docAnswers = [
+          { answered: formData.certificate_of_fitness !== '', passed: formData.certificate_of_fitness === 'valid' },
+          { answered: formData.certificate_of_fitness_valid !== '', passed: formData.certificate_of_fitness_valid === 'yes' },
+          { answered: formData.road_tax_valid !== null, passed: formData.road_tax_valid === true },
+          { answered: formData.insurance_valid !== null, passed: formData.insurance_valid === true },
+          { answered: formData.trip_authorization_signed !== null, passed: formData.trip_authorization_signed === true },
+          { answered: formData.logbook_present !== null, passed: formData.logbook_present === true },
+          { answered: formData.driver_handbook_present !== null, passed: formData.driver_handbook_present === true },
+          { answered: formData.permits_valid !== null, passed: formData.permits_valid === true },
+          { answered: formData.ppe_available !== null, passed: formData.ppe_available === true },
+          { answered: formData.route_familiarity !== null, passed: formData.route_familiarity === true },
+          { answered: formData.emergency_procedures_known !== null, passed: formData.emergency_procedures_known === true },
+          { answered: formData.gps_activated !== null, passed: formData.gps_activated === true },
+          { answered: formData.safety_briefing_provided !== '', passed: formData.safety_briefing_provided === 'yes' },
+          { answered: formData.rtsa_clearance !== '', passed: formData.rtsa_clearance === 'yes' },
+          { answered: formData.emergency_contact?.trim().length > 0, passed: formData.emergency_contact?.trim().length > 0 },
         ];
-        const answered = docQuestions.filter(q => q !== null && q !== undefined).length;
-        const passed = docQuestions.filter(q => q === true).length;
+        const answered = docAnswers.filter(q => q.answered).length;
+        const passed = docAnswers.filter(q => q.answered && q.passed).length;
         return {
           earned: passed * POINTS_PER_QUESTION,
           possible: 15 * POINTS_PER_QUESTION,
@@ -1670,7 +1670,6 @@ export default function NewInspectionWizard() {
         return (
           <div>
             {renderSectionHeader(true)}
-            {renderScoreDisplay()}
             
             {/* CRITICAL: Rest/Fatigue Clearance - Must be first and prominent */}
             <div style={{ 
@@ -1920,6 +1919,8 @@ export default function NewInspectionWizard() {
                 style={{ marginTop: '10px' }}
               />
             </div>
+            
+            {renderScoreDisplay()}
           </div>
         );
 
@@ -1927,7 +1928,6 @@ export default function NewInspectionWizard() {
         return (
           <div>
             {renderSectionHeader(true)}
-            {renderScoreDisplay()}
             
             <div style={{ marginBottom: '25px' }}>
               <label style={{ display: 'block', fontWeight: '600', color: '#000', marginBottom: '10px' }}>
@@ -2084,6 +2084,8 @@ export default function NewInspectionWizard() {
                 onChange={(e) => setFormData({ ...formData, emergency_contact_government: e.target.value })}
               />
             </div>
+            
+            {renderScoreDisplay()}
           </div>
         );
 
@@ -2091,7 +2093,6 @@ export default function NewInspectionWizard() {
         return (
           <div>
             {renderSectionHeader(true)}
-            {renderScoreDisplay()}
             {formData.exterior_checks.map((check, index) => (
               <CheckItem
                 key={index}
@@ -2110,6 +2111,7 @@ export default function NewInspectionWizard() {
                 }}
               />
             ))}
+            {renderScoreDisplay()}
           </div>
         );
 
@@ -2117,7 +2119,6 @@ export default function NewInspectionWizard() {
         return (
           <div>
             {renderSectionHeader(true)}
-            {renderScoreDisplay()}
             {formData.engine_checks.map((check, index) => (
               <CheckItem
                 key={index}
@@ -2136,6 +2137,7 @@ export default function NewInspectionWizard() {
                 }}
               />
             ))}
+            {renderScoreDisplay()}
           </div>
         );
 
@@ -2143,7 +2145,6 @@ export default function NewInspectionWizard() {
         return (
           <div>
             {renderSectionHeader(true)}
-            {renderScoreDisplay()}
             {formData.interior_checks.map((check, index) => (
               <CheckItem
                 key={index}
@@ -2162,6 +2163,7 @@ export default function NewInspectionWizard() {
                 }}
               />
             ))}
+            {renderScoreDisplay()}
           </div>
         );
 
@@ -2169,7 +2171,6 @@ export default function NewInspectionWizard() {
         return (
           <div>
             {renderSectionHeader(true)}
-            {renderScoreDisplay()}
             {formData.functional_checks.map((check, index) => (
               <CheckItem
                 key={index}
@@ -2188,6 +2189,7 @@ export default function NewInspectionWizard() {
                 }}
               />
             ))}
+            {renderScoreDisplay()}
           </div>
         );
 
@@ -2195,7 +2197,6 @@ export default function NewInspectionWizard() {
         return (
           <div>
             {renderSectionHeader(true)}
-            {renderScoreDisplay()}
             {formData.safety_checks.map((check, index) => (
               <CheckItem
                 key={index}
@@ -2214,6 +2215,7 @@ export default function NewInspectionWizard() {
                 }}
               />
             ))}
+            {renderScoreDisplay()}
           </div>
         );
 
@@ -2221,7 +2223,6 @@ export default function NewInspectionWizard() {
         return (
           <div>
             {renderSectionHeader(true)}
-            {renderScoreDisplay()}
             <div style={{ 
               marginBottom: '20px', 
               padding: '15px', 
@@ -2251,6 +2252,7 @@ export default function NewInspectionWizard() {
                 }}
               />
             ))}
+            {renderScoreDisplay()}
           </div>
         );
 
