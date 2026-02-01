@@ -290,6 +290,259 @@ export default function NewInspectionWizard() {
     ready_remarks: '',
   });
 
+  // Calculate real-time score for current step
+  const calculateStepScore = () => {
+    const POINTS_PER_QUESTION = 1.5;
+    
+    switch (currentStep) {
+      case 2: {
+        // Health & Fitness - count passed questions
+        const healthQuestions = [
+          formData.adequate_rest === true,
+          formData.alcohol_test_status === 'pass',
+          formData.temperature_check_status === 'pass',
+          formData.fit_for_duty === true,
+          formData.medication_status === false, // No medication is good
+          formData.no_health_impairment === true,
+          formData.fatigue_checklist_completed === true,
+        ];
+        const answered = healthQuestions.filter(q => q !== null && q !== undefined).length;
+        const passed = healthQuestions.filter(q => q === true).length;
+        return {
+          earned: passed * POINTS_PER_QUESTION,
+          possible: 7 * POINTS_PER_QUESTION,
+          answered,
+          total: 7,
+          percentage: answered > 0 ? Math.round((passed / answered) * 100) : 0,
+        };
+      }
+      
+      case 3: {
+        // Documentation & Compliance
+        const docQuestions = [
+          formData.certificate_of_fitness === 'valid',
+          formData.certificate_of_fitness_valid === 'yes',
+          formData.road_tax_valid === true,
+          formData.insurance_valid === true,
+          formData.trip_authorization_signed === true,
+          formData.logbook_present === true,
+          formData.driver_handbook_present === true,
+          formData.permits_valid === true,
+          formData.ppe_available === true,
+          formData.route_familiarity === true,
+          formData.emergency_procedures_known === true,
+          formData.gps_activated === true,
+          formData.safety_briefing_provided === 'yes',
+          formData.rtsa_clearance === 'yes',
+          formData.emergency_contact?.trim().length > 0,
+        ];
+        const answered = docQuestions.filter(q => q !== null && q !== undefined).length;
+        const passed = docQuestions.filter(q => q === true).length;
+        return {
+          earned: passed * POINTS_PER_QUESTION,
+          possible: 15 * POINTS_PER_QUESTION,
+          answered,
+          total: 15,
+          percentage: answered > 0 ? Math.round((passed / answered) * 100) : 0,
+        };
+      }
+      
+      case 4: {
+        // Exterior Checks
+        const checks = formData.exterior_checks;
+        const answered = checks.filter(c => c.status !== null).length;
+        const passed = checks.filter(c => c.status === 'pass').length;
+        return {
+          earned: passed * POINTS_PER_QUESTION,
+          possible: checks.length * POINTS_PER_QUESTION,
+          answered,
+          total: checks.length,
+          percentage: answered > 0 ? Math.round((passed / answered) * 100) : 0,
+        };
+      }
+      
+      case 5: {
+        // Engine Checks
+        const checks = formData.engine_checks;
+        const answered = checks.filter(c => c.status !== null).length;
+        const passed = checks.filter(c => c.status === 'pass').length;
+        return {
+          earned: passed * POINTS_PER_QUESTION,
+          possible: checks.length * POINTS_PER_QUESTION,
+          answered,
+          total: checks.length,
+          percentage: answered > 0 ? Math.round((passed / answered) * 100) : 0,
+        };
+      }
+      
+      case 6: {
+        // Interior Checks
+        const checks = formData.interior_checks;
+        const answered = checks.filter(c => c.status !== null).length;
+        const passed = checks.filter(c => c.status === 'pass').length;
+        return {
+          earned: passed * POINTS_PER_QUESTION,
+          possible: checks.length * POINTS_PER_QUESTION,
+          answered,
+          total: checks.length,
+          percentage: answered > 0 ? Math.round((passed / answered) * 100) : 0,
+        };
+      }
+      
+      case 7: {
+        // Functional Checks
+        const checks = formData.functional_checks;
+        const answered = checks.filter(c => c.status !== null).length;
+        const passed = checks.filter(c => c.status === 'pass').length;
+        return {
+          earned: passed * POINTS_PER_QUESTION,
+          possible: checks.length * POINTS_PER_QUESTION,
+          answered,
+          total: checks.length,
+          percentage: answered > 0 ? Math.round((passed / answered) * 100) : 0,
+        };
+      }
+      
+      case 8: {
+        // Safety Checks
+        const checks = formData.safety_checks;
+        const answered = checks.filter(c => c.status !== null).length;
+        const passed = checks.filter(c => c.status === 'pass').length;
+        return {
+          earned: passed * POINTS_PER_QUESTION,
+          possible: checks.length * POINTS_PER_QUESTION,
+          answered,
+          total: checks.length,
+          percentage: answered > 0 ? Math.round((passed / answered) * 100) : 0,
+        };
+      }
+      
+      case 9: {
+        // Brakes & Steering Checks
+        const checks = formData.brakes_steering_checks;
+        const answered = checks.filter(c => c.status !== null).length;
+        const passed = checks.filter(c => c.status === 'pass').length;
+        return {
+          earned: passed * POINTS_PER_QUESTION,
+          possible: checks.length * POINTS_PER_QUESTION,
+          answered,
+          total: checks.length,
+          percentage: answered > 0 ? Math.round((passed / answered) * 100) : 0,
+        };
+      }
+      
+      default:
+        return null;
+    }
+  };
+  
+  // Get risk status based on percentage
+  const getRiskStatus = (percentage: number): { status: string; color: string; bgColor: string } => {
+    if (percentage >= 90) {
+      return { status: 'LOW RISK', color: '#166534', bgColor: '#dcfce7' };
+    } else if (percentage >= 70) {
+      return { status: 'MEDIUM RISK', color: '#a16207', bgColor: '#fef9c3' };
+    } else {
+      return { status: 'HIGH RISK', color: '#991b1b', bgColor: '#fee2e2' };
+    }
+  };
+  
+  // Render score display component
+  const renderScoreDisplay = () => {
+    const score = calculateStepScore();
+    if (!score) return null;
+    
+    const risk = getRiskStatus(score.percentage);
+    
+    return (
+      <div style={{
+        marginBottom: '20px',
+        padding: '15px',
+        backgroundColor: '#f8fafc',
+        borderRadius: '8px',
+        border: '1px solid #e2e8f0',
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '15px'
+        }}>
+          <div>
+            <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '500' }}>
+              SECTION SCORE
+            </span>
+            <div style={{ marginTop: '4px' }}>
+              <span style={{ fontSize: '24px', fontWeight: '700', color: '#000' }}>
+                {score.earned.toFixed(1)}
+              </span>
+              <span style={{ fontSize: '16px', color: '#64748b' }}>
+                {' / '}{score.possible.toFixed(1)} pts
+              </span>
+            </div>
+          </div>
+          
+          <div style={{ textAlign: 'center' }}>
+            <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '500' }}>
+              PROGRESS
+            </span>
+            <div style={{ marginTop: '4px' }}>
+              <span style={{ fontSize: '18px', fontWeight: '600', color: '#000' }}>
+                {score.answered} / {score.total}
+              </span>
+              <span style={{ fontSize: '14px', color: '#64748b' }}> answered</span>
+            </div>
+          </div>
+          
+          <div style={{ textAlign: 'right' }}>
+            <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '500' }}>
+              RISK STATUS
+            </span>
+            <div style={{ 
+              marginTop: '4px',
+              padding: '6px 12px',
+              backgroundColor: risk.bgColor,
+              borderRadius: '6px',
+              display: 'inline-block'
+            }}>
+              <span style={{ 
+                fontSize: '14px', 
+                fontWeight: '700', 
+                color: risk.color 
+              }}>
+                {score.answered > 0 ? risk.status : 'NOT EVALUATED'}
+              </span>
+              {score.answered > 0 && (
+                <span style={{ fontSize: '13px', color: risk.color, marginLeft: '8px' }}>
+                  ({score.percentage}%)
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* Progress bar */}
+        <div style={{ marginTop: '12px' }}>
+          <div style={{
+            height: '8px',
+            backgroundColor: '#e2e8f0',
+            borderRadius: '4px',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              height: '100%',
+              width: `${(score.answered / score.total) * 100}%`,
+              backgroundColor: score.percentage >= 90 ? '#22c55e' : score.percentage >= 70 ? '#eab308' : '#ef4444',
+              borderRadius: '4px',
+              transition: 'width 0.3s ease'
+            }} />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
@@ -1251,34 +1504,51 @@ export default function NewInspectionWizard() {
     return titles[currentStep - 1];
   };
 
-  // Render section header with optional PDF download button
-  const renderSectionHeader = (showDownload: boolean = false) => (
-    <div style={{ 
-      display: 'flex', 
-      justifyContent: 'space-between', 
-      alignItems: 'center', 
-      marginBottom: '20px' 
-    }}>
-      <h2 style={{ color: '#000', margin: 0 }}>{getFormTitle()}</h2>
-      {showDownload && inspectionId && (
-        <button
-          onClick={() => downloadSectionPdf(currentStep)}
-          disabled={loading}
-          className="button-secondary"
-          style={{ 
-            width: 'auto', 
-            padding: '8px 16px', 
-            fontSize: '14px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}
-        >
-          <span>📄</span> Download PDF
-        </button>
-      )}
-    </div>
-  );
+  // Render section header with optional PDF download button (only shows if section is saved)
+  const renderSectionHeader = (showDownload: boolean = false) => {
+    // Map current step to saved section key
+    const sectionKeyMap: Record<number, keyof typeof savedSections> = {
+      2: 'health',
+      3: 'documentation',
+      4: 'exterior',
+      5: 'engine',
+      6: 'interior',
+      7: 'functional',
+      8: 'safety',
+      9: 'brakes_steering',
+    };
+    
+    const sectionKey = sectionKeyMap[currentStep];
+    const isSectionSaved = sectionKey ? savedSections[sectionKey] : false;
+    
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '20px' 
+      }}>
+        <h2 style={{ color: '#000', margin: 0 }}>{getFormTitle()}</h2>
+        {showDownload && inspectionId && isSectionSaved && (
+          <button
+            onClick={() => downloadSectionPdf(currentStep)}
+            disabled={loading}
+            className="button-secondary"
+            style={{ 
+              width: 'auto', 
+              padding: '8px 16px', 
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <span>📄</span> Download PDF
+          </button>
+        )}
+      </div>
+    );
+  };
 
   const renderForm = () => {
     switch (currentStep) {
@@ -1400,6 +1670,7 @@ export default function NewInspectionWizard() {
         return (
           <div>
             {renderSectionHeader(true)}
+            {renderScoreDisplay()}
             
             {/* CRITICAL: Rest/Fatigue Clearance - Must be first and prominent */}
             <div style={{ 
@@ -1656,6 +1927,7 @@ export default function NewInspectionWizard() {
         return (
           <div>
             {renderSectionHeader(true)}
+            {renderScoreDisplay()}
             
             <div style={{ marginBottom: '25px' }}>
               <label style={{ display: 'block', fontWeight: '600', color: '#000', marginBottom: '10px' }}>
@@ -1819,6 +2091,7 @@ export default function NewInspectionWizard() {
         return (
           <div>
             {renderSectionHeader(true)}
+            {renderScoreDisplay()}
             {formData.exterior_checks.map((check, index) => (
               <CheckItem
                 key={index}
@@ -1844,6 +2117,7 @@ export default function NewInspectionWizard() {
         return (
           <div>
             {renderSectionHeader(true)}
+            {renderScoreDisplay()}
             {formData.engine_checks.map((check, index) => (
               <CheckItem
                 key={index}
@@ -1869,6 +2143,7 @@ export default function NewInspectionWizard() {
         return (
           <div>
             {renderSectionHeader(true)}
+            {renderScoreDisplay()}
             {formData.interior_checks.map((check, index) => (
               <CheckItem
                 key={index}
@@ -1894,6 +2169,7 @@ export default function NewInspectionWizard() {
         return (
           <div>
             {renderSectionHeader(true)}
+            {renderScoreDisplay()}
             {formData.functional_checks.map((check, index) => (
               <CheckItem
                 key={index}
@@ -1919,6 +2195,7 @@ export default function NewInspectionWizard() {
         return (
           <div>
             {renderSectionHeader(true)}
+            {renderScoreDisplay()}
             {formData.safety_checks.map((check, index) => (
               <CheckItem
                 key={index}
@@ -1944,6 +2221,7 @@ export default function NewInspectionWizard() {
         return (
           <div>
             {renderSectionHeader(true)}
+            {renderScoreDisplay()}
             <div style={{ 
               marginBottom: '20px', 
               padding: '15px', 

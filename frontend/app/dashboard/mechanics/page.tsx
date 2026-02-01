@@ -19,9 +19,6 @@ export default function MechanicsPage() {
     specialization: '',
     phone_number: '',
     certification_status: 'certified',
-    last_vehicle_maintenance_date: '',
-    last_full_service_date: '',
-    last_partial_service_date: '',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -58,9 +55,6 @@ export default function MechanicsPage() {
         specialization: mechanic.specialization,
         phone_number: mechanic.phone_number,
         certification_status: mechanic.certification_status || 'certified',
-        last_vehicle_maintenance_date: mechanic.last_vehicle_maintenance_date || '',
-        last_full_service_date: mechanic.last_full_service_date || '',
-        last_partial_service_date: mechanic.last_partial_service_date || '',
       });
     } else {
       setEditingMechanic(null);
@@ -69,9 +63,6 @@ export default function MechanicsPage() {
         specialization: '',
         phone_number: '',
         certification_status: 'certified',
-        last_vehicle_maintenance_date: '',
-        last_full_service_date: '',
-        last_partial_service_date: '',
       });
     }
     setModalOpen(true);
@@ -87,9 +78,6 @@ export default function MechanicsPage() {
       specialization: '',
       phone_number: '',
       certification_status: 'certified',
-      last_vehicle_maintenance_date: '',
-      last_full_service_date: '',
-      last_partial_service_date: '',
     });
     setError('');
   };
@@ -279,33 +267,6 @@ export default function MechanicsPage() {
                   <option value="certified">Certified</option>
                   <option value="not_certified">Not Certified</option>
                 </select>
-              </div>
-              <div style={{ marginBottom: '15px' }}>
-                <label className="label">Last Vehicle Maintenance Date</label>
-                <input
-                  type="date"
-                  className="input"
-                  value={formData.last_vehicle_maintenance_date || ''}
-                  onChange={(e) => setFormData({ ...formData, last_vehicle_maintenance_date: e.target.value })}
-                />
-              </div>
-              <div style={{ marginBottom: '15px' }}>
-                <label className="label">Last Full Service Date</label>
-                <input
-                  type="date"
-                  className="input"
-                  value={formData.last_full_service_date || ''}
-                  onChange={(e) => setFormData({ ...formData, last_full_service_date: e.target.value })}
-                />
-              </div>
-              <div style={{ marginBottom: '15px' }}>
-                <label className="label">Last Partial Service Date</label>
-                <input
-                  type="date"
-                  className="input"
-                  value={formData.last_partial_service_date || ''}
-                  onChange={(e) => setFormData({ ...formData, last_partial_service_date: e.target.value })}
-                />
               </div>
 
               <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>

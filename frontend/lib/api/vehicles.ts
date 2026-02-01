@@ -7,6 +7,9 @@ export interface Vehicle {
   vehicle_type: string;
   driver_name?: string;
   is_active: boolean;
+  last_vehicle_maintenance_date?: string;
+  last_full_service_date?: string;
+  last_partial_service_date?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -15,6 +18,9 @@ export interface CreateVehicleData {
   registration_number: string;
   vehicle_type: string;
   driver_id?: string;
+  last_vehicle_maintenance_date?: string;
+  last_full_service_date?: string;
+  last_partial_service_date?: string;
 }
 
 export interface UpdateVehicleData extends Partial<CreateVehicleData> {

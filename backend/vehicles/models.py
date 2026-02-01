@@ -51,6 +51,24 @@ class Vehicle(models.Model):
         related_name='assigned_vehicle',
         help_text="Driver assigned to this vehicle (one-to-one relationship)"
     )
+    
+    # Service and Maintenance Dates
+    last_vehicle_maintenance_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Last date of vehicle maintenance based on trip"
+    )
+    last_full_service_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Last date of full service based on manufacturing mileage"
+    )
+    last_partial_service_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Last date of partial service based on manufacturing mileage"
+    )
+    
     is_active = models.BooleanField(
         default=True,
         db_index=True,

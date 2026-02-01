@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Mechanic, CertificationStatus, ServiceType
+from .models import Mechanic, CertificationStatus
 import re
 
 User = get_user_model()
@@ -81,9 +81,6 @@ class MechanicDetailSerializer(serializers.ModelSerializer):
             'phone_number',
             'certification_status',
             'certification_status_display',
-            'last_vehicle_maintenance_date',
-            'last_full_service_date',
-            'last_partial_service_date',
             'is_active',
             'created_at',
             'updated_at',
