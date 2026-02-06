@@ -242,12 +242,12 @@ class InspectionPDFGenerator:
         # Detailed Score Breakdown with weights
         score_breakdown = health_fitness.get_score_breakdown()
         breakdown_data = [['Check Item', 'Weight', 'Earned', 'Status', 'Critical']]
-        for item in score_breakdown:
+        for item in score_breakdown['items']:
             status_display = item['status']
             critical_marker = '⚠️' if item['critical'] else ''
             breakdown_data.append([
                 item['item'],
-                str(item['weight']),
+                str(item.get('weight', 1)),
                 str(item['earned']),
                 status_display,
                 critical_marker
@@ -267,8 +267,8 @@ class InspectionPDFGenerator:
         ])
         
         # Color code earned column based on whether points were earned
-        for i, item in enumerate(score_breakdown, 1):
-            if item['earned'] == item['weight']:
+        for i, item in enumerate(score_breakdown['items'], 1):
+            if item['earned'] == item.get('weight', 1):
                 breakdown_style.add('BACKGROUND', (2, i), (2, i), colors.HexColor('#90EE90'))
             elif item['earned'] == 0 and item['critical']:
                 breakdown_style.add('BACKGROUND', (2, i), (2, i), colors.HexColor('#FF6B6B'))
