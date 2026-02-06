@@ -36,7 +36,11 @@ from .models import (
     EvaluationSummary,
     InspectionSignOff,
     PreTripScoreSummary,
+    PostChecklistScoreSummary,
+    FinalScoreSummary,
     RiskStatus,
+    FinalRiskLevel,
+    FinalStatus,
     SCORE_PER_QUESTION,
 )
 
@@ -793,23 +797,23 @@ class InspectionPDFGenerator:
         self.story.append(section)
         
         # Overall Score Box with Risk Status
-        score_color = colors.HexColor('#90EE90') if float(score_summary.score_percentage) >= 80 else (
-            colors.HexColor('#FFD700') if float(score_summary.score_percentage) >= 60 else colors.HexColor('#FF6B6B')
+        score_color = colors.HexColor('#90EE90') if float(score_summary.score_percentage) >= 85 else (
+            colors.HexColor('#FFD700') if float(score_summary.score_percentage) >= 70 else colors.HexColor('#FF6B6B')
         )
         
-        # Risk status color mapping
+        # Risk status color mapping - updated for new risk levels
         risk_colors = {
-            'low_risk': colors.HexColor('#90EE90'),  # Green
-            'moderate_risk': colors.HexColor('#FFD700'),  # Yellow
-            'high_risk': colors.HexColor('#FFA500'),  # Orange
-            'critical_risk': colors.HexColor('#FF6B6B'),  # Red
+            'no_risk': colors.HexColor('#90EE90'),  # Green
+            'very_low_risk': colors.HexColor('#E3F2FD'),  # Light Blue
+            'low_risk': colors.HexColor('#FFF3E0'),  # Light Orange
+            'high_risk': colors.HexColor('#FF6B6B'),  # Red
         }
         risk_color = risk_colors.get(score_summary.risk_status, colors.HexColor('#FF6B6B'))
         
         overall_data = [
             ['OVERALL PRE-TRIP SCORE', f'{float(score_summary.total_score):.1f} / {float(score_summary.max_possible_score):.1f} ({score_summary.score_percentage}%)'],
             ['TOTAL QUESTIONS', str(score_summary.total_questions)],
-            ['SCORE PER QUESTION', '1.5 points'],
+            ['SCORE PER QUESTION', '1 point'],
             ['SCORE LEVEL', score_summary.get_score_level_display()],
             ['RISK STATUS', score_summary.get_risk_status_display()],
             ['TRAVEL CLEARANCE', 'CLEARED ✓' if score_summary.is_cleared_for_travel else 'NOT CLEARED ⚠'],
@@ -836,40 +840,56 @@ class InspectionPDFGenerator:
         self.story.append(overall_table)
         self.story.append(Spacer(1, 0.15*inch))
         
-        # Section Breakdown with Subtotals
+        # Section Breakdown with Subtotals and Risk Levels
         section_summary = score_summary.get_section_summary()
-        breakdown_data = [['Section', 'Questions', 'Subtotal', 'Percentage']]
+        breakdown_data = [['Section', 'Questions', 'Subtotal', 'Percentage', 'Risk Level']]
         for section in section_summary:
             pct = section['percentage']
             subtotal = section.get('subtotal', f"{section['score']}/{section['max']}")
             questions = section.get('questions', '-')
+            risk_display = section.get('risk_display', 'N/A')
             breakdown_data.append([
                 section['section'],
                 str(questions),
                 subtotal,
-                f"{pct}%"
+                f"{pct}%",
+                risk_display
             ])
         
-        breakdown_table = Table(breakdown_data, colWidths=[2.5*inch, 1.0*inch, 1.5*inch, 1.5*inch])
+        breakdown_table = Table(breakdown_data, colWidths=[2.0*inch, 0.8*inch, 1.2*inch, 1.0*inch, 1.5*inch])
         breakdown_style = TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c5aa0')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('ALIGN', (1, 0), (3, -1), 'CENTER'),
+            ('ALIGN', (1, 0), (4, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 9),
             ('GRID', (0, 0), (-1, -1), 1, colors.grey),
         ])
         
-        # Color code percentage column
+        # Color code percentage and risk columns using new thresholds
+        risk_colors = {
+            'No Risk': colors.HexColor('#e8f5e9'),
+            'Very Low Risk': colors.HexColor('#E3F2FD'),
+            'Low Risk': colors.HexColor('#FFF3E0'),
+            'High Risk': colors.HexColor('#FFEBEE'),
+        }
         for i, section in enumerate(section_summary, 1):
             pct = section['percentage']
-            if pct >= 80:
-                breakdown_style.add('BACKGROUND', (3, i), (3, i), colors.HexColor('#90EE90'))
-            elif pct >= 60:
-                breakdown_style.add('BACKGROUND', (3, i), (3, i), colors.HexColor('#FFD700'))
+            # Color code percentage column
+            if pct >= 100:
+                breakdown_style.add('BACKGROUND', (3, i), (3, i), colors.HexColor('#e8f5e9'))
+            elif pct >= 85:
+                breakdown_style.add('BACKGROUND', (3, i), (3, i), colors.HexColor('#E3F2FD'))
+            elif pct >= 70:
+                breakdown_style.add('BACKGROUND', (3, i), (3, i), colors.HexColor('#FFF3E0'))
             else:
-                breakdown_style.add('BACKGROUND', (3, i), (3, i), colors.HexColor('#FF6B6B'))
+                breakdown_style.add('BACKGROUND', (3, i), (3, i), colors.HexColor('#FFEBEE'))
+            
+            # Color code risk column
+            risk_display = section.get('risk_display', 'N/A')
+            risk_bg = risk_colors.get(risk_display, colors.HexColor('#f5f5f5'))
+            breakdown_style.add('BACKGROUND', (4, i), (4, i), risk_bg)
         
         breakdown_table.setStyle(breakdown_style)
         self.story.append(breakdown_table)
@@ -900,6 +920,253 @@ class InspectionPDFGenerator:
         
         self.story.append(Spacer(1, 0.2*inch))
     
+    def generate_post_checklist_score_summary(self, inspection):
+        """Generate Post-Checklist Score Summary Section"""
+        # Try to get or create post-checklist score summary
+        try:
+            score_summary = PostChecklistScoreSummary.objects.get(inspection=inspection)
+        except PostChecklistScoreSummary.DoesNotExist:
+            # Create and calculate score summary
+            score_summary = PostChecklistScoreSummary(inspection=inspection)
+            score_summary.save()
+        
+        section = Paragraph("POST-CHECKLIST SCORE SUMMARY", self.styles['SectionHeader'])
+        self.story.append(section)
+        
+        # Overall Score Box with Risk Status
+        pct = float(score_summary.score_percentage)
+        score_color = colors.HexColor('#90EE90') if pct >= 100 else (
+            colors.HexColor('#E3F2FD') if pct >= 85 else (
+                colors.HexColor('#FFF3E0') if pct >= 70 else colors.HexColor('#FF6B6B')
+            )
+        )
+        
+        # Risk status color mapping
+        risk_colors = {
+            'no_risk': colors.HexColor('#90EE90'),  # Green
+            'very_low_risk': colors.HexColor('#E3F2FD'),  # Light Blue
+            'low_risk': colors.HexColor('#FFF3E0'),  # Light Orange
+            'high_risk': colors.HexColor('#FF6B6B'),  # Red
+        }
+        risk_color = risk_colors.get(score_summary.risk_status, colors.HexColor('#FF6B6B'))
+        
+        overall_data = [
+            ['OVERALL POST-CHECKLIST SCORE', f'{float(score_summary.total_score):.1f} / {float(score_summary.max_possible_score):.1f} ({score_summary.score_percentage}%)'],
+            ['TOTAL QUESTIONS', str(score_summary.total_questions)],
+            ['SCORE PER QUESTION', '1 point'],
+            ['RISK STATUS', score_summary.get_risk_status_display()],
+        ]
+        
+        overall_table = Table(overall_data, colWidths=[3*inch, 3.5*inch])
+        overall_style = TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#4a7c4e')),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.white),
+            ('BACKGROUND', (1, 0), (1, 0), score_color),
+            ('BACKGROUND', (1, 1), (1, 2), colors.HexColor('#f0f0f0')),
+            ('BACKGROUND', (1, 3), (1, 3), risk_color),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ])
+        overall_table.setStyle(overall_style)
+        self.story.append(overall_table)
+        self.story.append(Spacer(1, 0.15*inch))
+        
+        # Section Breakdown with Subtotals and Risk Levels
+        section_summary = score_summary.get_section_summary()
+        breakdown_data = [['Section', 'Questions', 'Subtotal', 'Percentage', 'Risk Level']]
+        for section in section_summary:
+            pct = section['percentage']
+            subtotal = section.get('subtotal', f"{section['score']}/{section['max']}")
+            questions = section.get('questions', '-')
+            risk_display = section.get('risk_display', 'N/A')
+            breakdown_data.append([
+                section['section'],
+                str(questions),
+                subtotal,
+                f"{pct}%",
+                risk_display
+            ])
+        
+        breakdown_table = Table(breakdown_data, colWidths=[2.0*inch, 0.8*inch, 1.2*inch, 1.0*inch, 1.5*inch])
+        breakdown_style = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4a7c4e')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (4, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+        ])
+        
+        # Color code percentage and risk columns
+        risk_bg_colors = {
+            'No Risk': colors.HexColor('#e8f5e9'),
+            'Very Low Risk': colors.HexColor('#E3F2FD'),
+            'Low Risk': colors.HexColor('#FFF3E0'),
+            'High Risk': colors.HexColor('#FFEBEE'),
+        }
+        for i, section in enumerate(section_summary, 1):
+            pct = section['percentage']
+            # Color code percentage column
+            if pct >= 100:
+                breakdown_style.add('BACKGROUND', (3, i), (3, i), colors.HexColor('#e8f5e9'))
+            elif pct >= 85:
+                breakdown_style.add('BACKGROUND', (3, i), (3, i), colors.HexColor('#E3F2FD'))
+            elif pct >= 70:
+                breakdown_style.add('BACKGROUND', (3, i), (3, i), colors.HexColor('#FFF3E0'))
+            else:
+                breakdown_style.add('BACKGROUND', (3, i), (3, i), colors.HexColor('#FFEBEE'))
+            
+            # Color code risk column
+            risk_display = section.get('risk_display', 'N/A')
+            risk_bg = risk_bg_colors.get(risk_display, colors.HexColor('#f5f5f5'))
+            breakdown_style.add('BACKGROUND', (4, i), (4, i), risk_bg)
+        
+        breakdown_table.setStyle(breakdown_style)
+        self.story.append(breakdown_table)
+        self.story.append(Spacer(1, 0.2*inch))
+    
+    def generate_final_score_summary(self, inspection):
+        """Generate Final Score Summary Section combining Pre and Post Checklists"""
+        # Try to get or create final score summary
+        try:
+            final_summary = FinalScoreSummary.objects.get(inspection=inspection)
+        except FinalScoreSummary.DoesNotExist:
+            # Create and calculate final score summary
+            final_summary = FinalScoreSummary(inspection=inspection)
+            final_summary.save()
+        
+        section = Paragraph("FINAL EVALUATION REPORT", self.styles['SectionHeader'])
+        self.story.append(section)
+        
+        # Final Status colors
+        final_status_colors = {
+            'passed': colors.HexColor('#90EE90'),
+            'needs_review': colors.HexColor('#FFF3E0'),
+            'failed': colors.HexColor('#FF6B6B'),
+        }
+        
+        # Final Risk level colors
+        final_risk_colors = {
+            'no_risk': colors.HexColor('#90EE90'),
+            'very_low_risk': colors.HexColor('#E3F2FD'),
+            'low_risk': colors.HexColor('#FFF3E0'),
+            'high_risk': colors.HexColor('#FF6B6B'),
+        }
+        
+        status_color = final_status_colors.get(final_summary.final_status, colors.HexColor('#f0f0f0'))
+        risk_color = final_risk_colors.get(final_summary.final_risk_level, colors.HexColor('#f0f0f0'))
+        
+        # Final Score Summary Table
+        final_data = [
+            ['PRE-CHECKLIST (50%)', f'{float(final_summary.pre_checklist_percentage):.1f}% → Weighted: {float(final_summary.pre_checklist_weighted):.1f}%'],
+            ['POST-CHECKLIST (50%)', f'{float(final_summary.post_checklist_percentage):.1f}% → Weighted: {float(final_summary.post_checklist_weighted):.1f}%'],
+            ['FINAL PERCENTAGE', f'{float(final_summary.final_percentage):.1f}%'],
+            ['FINAL STATUS', final_summary.get_final_status_display()],
+            ['FINAL RISK LEVEL', final_summary.get_final_risk_level_display()],
+        ]
+        
+        final_table = Table(final_data, colWidths=[3*inch, 3.5*inch])
+        final_style = TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#1976d2')),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.white),
+            ('BACKGROUND', (1, 0), (1, 1), colors.HexColor('#f0f0f0')),
+            ('BACKGROUND', (1, 2), (1, 2), colors.HexColor('#e3f2fd')),
+            ('BACKGROUND', (1, 3), (1, 3), status_color),
+            ('BACKGROUND', (1, 4), (1, 4), risk_color),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ])
+        final_table.setStyle(final_style)
+        self.story.append(final_table)
+        self.story.append(Spacer(1, 0.15*inch))
+        
+        # Final Comment
+        if final_summary.final_comment:
+            comment_title = Paragraph('<b>Final Comment:</b>', self.styles['Normal'])
+            self.story.append(comment_title)
+            self.story.append(Spacer(1, 0.05*inch))
+            
+            comment_text = Paragraph(final_summary.final_comment, self.styles['Normal'])
+            self.story.append(comment_text)
+            self.story.append(Spacer(1, 0.15*inch))
+        
+        # Module Performance Breakdown
+        breakdown = final_summary.get_breakdown()
+        if breakdown:
+            breakdown_title = Paragraph('<b>Module Performance Breakdown:</b>', self.styles['Normal'])
+            self.story.append(breakdown_title)
+            self.story.append(Spacer(1, 0.1*inch))
+            
+            # Pre-Checklist Modules
+            pre_title = Paragraph('<i>Pre-Checklist Modules:</i>', self.styles['Normal'])
+            self.story.append(pre_title)
+            
+            pre_sections = breakdown.get('pre_checklist', {}).get('sections', [])
+            if pre_sections:
+                pre_data = [['Module', 'Score', 'Percentage', 'Risk']]
+                for section in pre_sections:
+                    pre_data.append([
+                        section['section'],
+                        f"{section['score']}/{section['max']}",
+                        f"{section['percentage']}%",
+                        section.get('risk_display', 'N/A')
+                    ])
+                
+                pre_table = Table(pre_data, colWidths=[2.5*inch, 1.2*inch, 1.2*inch, 1.5*inch])
+                pre_style = TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c5aa0')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 8),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                    ('TOPPADDING', (0, 0), (-1, -1), 5),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+                ])
+                pre_table.setStyle(pre_style)
+                self.story.append(pre_table)
+                self.story.append(Spacer(1, 0.1*inch))
+            
+            # Post-Checklist Modules
+            post_title = Paragraph('<i>Post-Checklist Modules:</i>', self.styles['Normal'])
+            self.story.append(post_title)
+            
+            post_sections = breakdown.get('post_checklist', {}).get('sections', [])
+            if post_sections:
+                post_data = [['Module', 'Score', 'Percentage', 'Risk']]
+                for section in post_sections:
+                    post_data.append([
+                        section['section'],
+                        f"{section['score']}/{section['max']}",
+                        f"{section['percentage']}%",
+                        section.get('risk_display', 'N/A')
+                    ])
+                
+                post_table = Table(post_data, colWidths=[2.5*inch, 1.2*inch, 1.2*inch, 1.5*inch])
+                post_style = TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4a7c4e')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 8),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                    ('TOPPADDING', (0, 0), (-1, -1), 5),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+                ])
+                post_table.setStyle(post_style)
+                self.story.append(post_table)
+        
+        self.story.append(Spacer(1, 0.2*inch))
+
     def generate_section_pdf(self, inspection_id, section_name):
         """
         Generate PDF for a specific section of the pre-trip checklist wizard.
@@ -1053,13 +1320,15 @@ class InspectionPDFGenerator:
         self.story.append(section_title)
         self.story.append(Spacer(1, 0.1*inch))
         
-        score_color = colors.HexColor('#90EE90') if percentage >= 80 else (
-            colors.HexColor('#FFD700') if percentage >= 60 else colors.HexColor('#FF6B6B')
+        score_color = colors.HexColor('#e8f5e9') if percentage >= 100 else (
+            colors.HexColor('#E3F2FD') if percentage >= 85 else (
+                colors.HexColor('#FFF3E0') if percentage >= 70 else colors.HexColor('#FFEBEE')
+            )
         )
         
         score_data = [
             ['Questions', 'Score Per Question', 'Section Score', 'Percentage'],
-            [str(questions), '1.5 points', f'{score:.1f} / {max_score:.1f}', f'{percentage}%']
+            [str(questions), '1 point', f'{score:.1f} / {max_score:.1f}', f'{percentage}%']
         ]
         
         score_table = Table(score_data, colWidths=[1.5*inch, 1.5*inch, 2*inch, 1.5*inch])
@@ -1077,19 +1346,19 @@ class InspectionPDFGenerator:
         
         self.story.append(score_table)
         
-        # Risk indicator based on section percentage
-        if percentage >= 90:
+        # Risk indicator based on section percentage - updated thresholds
+        if percentage >= 100:
+            risk_text = 'NO RISK'
+            risk_color = colors.HexColor('#e8f5e9')
+        elif percentage >= 85:
+            risk_text = 'VERY LOW RISK'
+            risk_color = colors.HexColor('#E3F2FD')
+        elif percentage >= 70:
             risk_text = 'LOW RISK'
-            risk_color = colors.HexColor('#90EE90')
-        elif percentage >= 75:
-            risk_text = 'MODERATE RISK'
-            risk_color = colors.HexColor('#FFD700')
-        elif percentage >= 60:
-            risk_text = 'HIGH RISK'
-            risk_color = colors.HexColor('#FFA500')
+            risk_color = colors.HexColor('#FFF3E0')
         else:
-            risk_text = 'CRITICAL RISK'
-            risk_color = colors.HexColor('#FF6B6B')
+            risk_text = 'HIGH RISK'
+            risk_color = colors.HexColor('#FFEBEE')
         
         self.story.append(Spacer(1, 0.1*inch))
         
@@ -1151,11 +1420,13 @@ class InspectionPDFGenerator:
         self.generate_trip_behaviors(inspection)
         self.generate_driving_behaviors(inspection)
         self.generate_post_trip(inspection)
+        self.generate_post_checklist_score_summary(inspection)  # Add post-checklist score summary
         self.generate_risk_score(inspection)
         self.generate_corrective_measures(inspection)
         self.generate_enforcement_actions(inspection)
         self.generate_supervisor_remarks(inspection)
         self.generate_evaluation(inspection)
+        self.generate_final_score_summary(inspection)  # Add final combined score summary
         self.generate_signatures(inspection)
         
         # Build PDF with custom canvas

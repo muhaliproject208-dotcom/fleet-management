@@ -291,8 +291,10 @@ export default function NewInspectionWizard() {
   });
 
   // Calculate real-time score for current step
+  // Total questions across all pre-checklist forms = 64
+  const TOTAL_PRECHECKLIST_QUESTIONS = 64;
   const calculateStepScore = () => {
-    const POINTS_PER_QUESTION = 1.5;
+    const POINTS_PER_QUESTION = 1;
     
     switch (currentStep) {
       case 2: {
@@ -436,14 +438,16 @@ export default function NewInspectionWizard() {
     }
   };
   
-  // Get risk status based on percentage
+  // Get risk status based on percentage - new thresholds
   const getRiskStatus = (percentage: number): { status: string; color: string; bgColor: string } => {
-    if (percentage >= 90) {
-      return { status: 'LOW RISK', color: '#166534', bgColor: '#dcfce7' };
+    if (percentage >= 100) {
+      return { status: 'NO RISK', color: '#166534', bgColor: '#e8f5e9' };
+    } else if (percentage >= 85) {
+      return { status: 'VERY LOW RISK', color: '#1565c0', bgColor: '#e3f2fd' };
     } else if (percentage >= 70) {
-      return { status: 'MEDIUM RISK', color: '#a16207', bgColor: '#fef9c3' };
+      return { status: 'LOW RISK', color: '#ef6c00', bgColor: '#fff3e0' };
     } else {
-      return { status: 'HIGH RISK', color: '#991b1b', bgColor: '#fee2e2' };
+      return { status: 'HIGH RISK', color: '#c62828', bgColor: '#ffebee' };
     }
   };
   
@@ -453,6 +457,8 @@ export default function NewInspectionWizard() {
     if (!score) return null;
     
     const risk = getRiskStatus(score.percentage);
+    // Calculate this section's contribution to the total prechecklist score
+    const totalPercentage = ((score.earned / TOTAL_PRECHECKLIST_QUESTIONS) * 100).toFixed(2);
     
     return (
       <div style={{
@@ -475,11 +481,14 @@ export default function NewInspectionWizard() {
             </span>
             <div style={{ marginTop: '4px' }}>
               <span style={{ fontSize: '24px', fontWeight: '700', color: '#000' }}>
-                {score.earned.toFixed(1)}
+                {score.earned}
               </span>
               <span style={{ fontSize: '16px', color: '#64748b' }}>
-                {' / '}{score.possible.toFixed(1)} pts
+                {' / '}{score.possible} pts
               </span>
+            </div>
+            <div style={{ marginTop: '2px', fontSize: '12px', color: '#64748b' }}>
+              {totalPercentage}% of total checklist
             </div>
           </div>
           
@@ -533,7 +542,7 @@ export default function NewInspectionWizard() {
             <div style={{
               height: '100%',
               width: `${(score.answered / score.total) * 100}%`,
-              backgroundColor: score.percentage >= 90 ? '#22c55e' : score.percentage >= 70 ? '#eab308' : '#ef4444',
+              backgroundColor: score.percentage >= 100 ? '#4caf50' : score.percentage >= 85 ? '#2196f3' : score.percentage >= 70 ? '#ff9800' : '#f44336',
               borderRadius: '4px',
               transition: 'width 0.3s ease'
             }} />

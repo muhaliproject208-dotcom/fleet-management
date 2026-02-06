@@ -102,10 +102,10 @@ class HealthFitnessCheck(models.Model):
     # Scoring fields
     section_score = models.IntegerField(
         default=0,
-        help_text="Calculated score for this section (0-100)"
+        help_text="Calculated score for this section (points earned)"
     )
     max_possible_score = models.IntegerField(
-        default=530,  # Sum of all HEALTH_FITNESS_SCORES values
+        default=7,  # 7 questions * 1 point each
         help_text="Maximum possible score for this section"
     )
     
@@ -124,41 +124,42 @@ class HealthFitnessCheck(models.Model):
     def calculate_score(self):
         """
         Calculate the health & fitness score based on check results.
-        Returns tuple of (earned_score, max_score, percentage)
+        Each question = 1 point. Returns tuple of (earned_score, max_score, section_percentage)
         """
         earned = 0
-        max_score = sum(HEALTH_FITNESS_SCORES.values())
+        max_score = 7  # 7 questions in health & fitness section
         
-        # Adequate Rest - Critical (100 points)
+        # Adequate Rest - 1 point
         if self.adequate_rest is True:
-            earned += HEALTH_FITNESS_SCORES['adequate_rest']
+            earned += 1
         
-        # Alcohol Test (100 points)
+        # Alcohol Test - 1 point
         if self.alcohol_test_status == HealthCheckStatus.PASS:
-            earned += HEALTH_FITNESS_SCORES['alcohol_test']
+            earned += 1
         
-        # Fit for Duty (90 points)
+        # Fit for Duty - 1 point
         if self.fit_for_duty:
-            earned += HEALTH_FITNESS_SCORES['fit_for_duty']
+            earned += 1
         
-        # No Health Impairment (80 points)
+        # No Health Impairment - 1 point
         if self.no_health_impairment:
-            earned += HEALTH_FITNESS_SCORES['no_health_impairment']
+            earned += 1
         
-        # Fatigue Checklist (70 points)
+        # Fatigue Checklist - 1 point
         if self.fatigue_checklist_completed:
-            earned += HEALTH_FITNESS_SCORES['fatigue_checklist']
+            earned += 1
         
-        # Temperature Check (50 points)
+        # Temperature Check - 1 point
         if self.temperature_check_status == HealthCheckStatus.PASS:
-            earned += HEALTH_FITNESS_SCORES['temperature_check']
+            earned += 1
         
-        # Medication Status - Give points if NOT on medication (40 points)
+        # Not on Medication - 1 point
         if not self.medication_status:
-            earned += HEALTH_FITNESS_SCORES['medication_status']
+            earned += 1
         
-        percentage = round((earned / max_score) * 100, 1) if max_score > 0 else 0
-        return earned, max_score, percentage
+        # Section percentage = (earned / max_score) * 100
+        section_percentage = round((earned / max_score) * 100, 1) if max_score > 0 else 0
+        return earned, max_score, section_percentage
     
     def save(self, *args, **kwargs):
         """Override save to calculate score and set clearance status"""
@@ -205,66 +206,77 @@ class HealthFitnessCheck(models.Model):
         return "✓ Driver cleared for travel."
     
     def get_score_breakdown(self):
-        """Return detailed score breakdown for each item"""
+        """Return detailed score breakdown for each item (1 point per question)"""
+        from .scoring import TOTAL_PRECHECKLIST_QUESTIONS, get_section_risk_level, get_section_risk_display
+        
         breakdown = []
+        total_earned = 0
+        max_score = 7  # 7 questions total
         
-        breakdown.append({
-            'item': 'Adequate Rest (8+ hours)',
-            'weight': HEALTH_FITNESS_SCORES['adequate_rest'],
-            'earned': HEALTH_FITNESS_SCORES['adequate_rest'] if self.adequate_rest is True else 0,
-            'status': 'Yes' if self.adequate_rest is True else ('No' if self.adequate_rest is False else 'N/A'),
-            'critical': True
-        })
+        # Check each item and build breakdown
+        items = [
+            {
+                'item': 'Adequate Rest (8+ hours)',
+                'earned': 1 if self.adequate_rest is True else 0,
+                'status': 'Yes' if self.adequate_rest is True else ('No' if self.adequate_rest is False else 'N/A'),
+                'critical': True
+            },
+            {
+                'item': 'Alcohol/Drug Test',
+                'earned': 1 if self.alcohol_test_status == HealthCheckStatus.PASS else 0,
+                'status': self.get_alcohol_test_status_display(),
+                'critical': True
+            },
+            {
+                'item': 'Fit for Duty',
+                'earned': 1 if self.fit_for_duty else 0,
+                'status': 'Yes' if self.fit_for_duty else 'No',
+                'critical': True
+            },
+            {
+                'item': 'No Health Impairment',
+                'earned': 1 if self.no_health_impairment else 0,
+                'status': 'Yes' if self.no_health_impairment else 'No',
+                'critical': True
+            },
+            {
+                'item': 'Fatigue Checklist Completed',
+                'earned': 1 if self.fatigue_checklist_completed else 0,
+                'status': 'Yes' if self.fatigue_checklist_completed else 'No',
+                'critical': False
+            },
+            {
+                'item': 'Temperature Check',
+                'earned': 1 if self.temperature_check_status == HealthCheckStatus.PASS else 0,
+                'status': self.get_temperature_check_status_display(),
+                'critical': False
+            },
+            {
+                'item': 'Not on Medication',
+                'earned': 1 if not self.medication_status else 0,
+                'status': 'No medication' if not self.medication_status else 'On medication',
+                'critical': False
+            },
+        ]
         
-        breakdown.append({
-            'item': 'Alcohol/Drug Test',
-            'weight': HEALTH_FITNESS_SCORES['alcohol_test'],
-            'earned': HEALTH_FITNESS_SCORES['alcohol_test'] if self.alcohol_test_status == HealthCheckStatus.PASS else 0,
-            'status': self.get_alcohol_test_status_display(),
-            'critical': True
-        })
+        for item in items:
+            total_earned += item['earned']
+            breakdown.append(item)
         
-        breakdown.append({
-            'item': 'Fit for Duty',
-            'weight': HEALTH_FITNESS_SCORES['fit_for_duty'],
-            'earned': HEALTH_FITNESS_SCORES['fit_for_duty'] if self.fit_for_duty else 0,
-            'status': 'Yes' if self.fit_for_duty else 'No',
-            'critical': True
-        })
+        # Calculate section and total percentages
+        section_percentage = round((total_earned / max_score) * 100, 1) if max_score > 0 else 0
+        total_percentage = round((total_earned / TOTAL_PRECHECKLIST_QUESTIONS) * 100, 2)
+        risk_level = get_section_risk_level(section_percentage)
         
-        breakdown.append({
-            'item': 'No Health Impairment',
-            'weight': HEALTH_FITNESS_SCORES['no_health_impairment'],
-            'earned': HEALTH_FITNESS_SCORES['no_health_impairment'] if self.no_health_impairment else 0,
-            'status': 'Yes' if self.no_health_impairment else 'No',
-            'critical': True
-        })
-        
-        breakdown.append({
-            'item': 'Fatigue Checklist Completed',
-            'weight': HEALTH_FITNESS_SCORES['fatigue_checklist'],
-            'earned': HEALTH_FITNESS_SCORES['fatigue_checklist'] if self.fatigue_checklist_completed else 0,
-            'status': 'Yes' if self.fatigue_checklist_completed else 'No',
-            'critical': False
-        })
-        
-        breakdown.append({
-            'item': 'Temperature Check',
-            'weight': HEALTH_FITNESS_SCORES['temperature_check'],
-            'earned': HEALTH_FITNESS_SCORES['temperature_check'] if self.temperature_check_status == HealthCheckStatus.PASS else 0,
-            'status': self.get_temperature_check_status_display(),
-            'critical': False
-        })
-        
-        breakdown.append({
-            'item': 'Not on Medication',
-            'weight': HEALTH_FITNESS_SCORES['medication_status'],
-            'earned': HEALTH_FITNESS_SCORES['medication_status'] if not self.medication_status else 0,
-            'status': 'No medication' if not self.medication_status else 'On medication',
-            'critical': False
-        })
-        
-        return breakdown
+        return {
+            'items': breakdown,
+            'total': total_earned,
+            'max': max_score,
+            'section_percentage': section_percentage,
+            'total_percentage': total_percentage,
+            'risk_level': risk_level,
+            'risk_display': get_section_risk_display(risk_level)
+        }
     
     def clean(self):
         """Validate model fields"""

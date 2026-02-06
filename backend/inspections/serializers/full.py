@@ -38,6 +38,11 @@ from .evaluation import (
     EvaluationSummarySerializer,
 )
 from .signoff import InspectionSignOffSerializer
+from .scoring import (
+    PreTripScoreSummarySerializer,
+    PostChecklistScoreSummarySerializer,
+    FinalScoreSummarySerializer,
+)
 
 
 class PreTripInspectionFullSerializer(serializers.ModelSerializer):
@@ -60,6 +65,11 @@ class PreTripInspectionFullSerializer(serializers.ModelSerializer):
     risk_score = RiskScoreSummarySerializer(read_only=True, allow_null=True)
     supervisor_remarks = SupervisorRemarksSerializer(read_only=True, allow_null=True)
     evaluation = EvaluationSummarySerializer(read_only=True, allow_null=True)
+    
+    # Score summaries
+    pre_trip_score = PreTripScoreSummarySerializer(read_only=True, allow_null=True)
+    post_checklist_score = PostChecklistScoreSummarySerializer(read_only=True, allow_null=True)
+    final_score = FinalScoreSummarySerializer(read_only=True, allow_null=True)
     
     # ForeignKey relationships (many)
     exterior_checks = VehicleExteriorCheckSerializer(
@@ -134,6 +144,11 @@ class PreTripInspectionFullSerializer(serializers.ModelSerializer):
             'risk_score',
             'supervisor_remarks',
             'evaluation',
+            
+            # Score summaries
+            'pre_trip_score',
+            'post_checklist_score',
+            'final_score',
             
             # ForeignKey relationships (many)
             'exterior_checks',

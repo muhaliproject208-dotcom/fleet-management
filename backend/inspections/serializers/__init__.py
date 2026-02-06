@@ -37,7 +37,11 @@ from .evaluation import (
 )
 from .signoff import InspectionSignOffSerializer
 from .full import PreTripInspectionFullSerializer
-from .scoring import PreTripScoreSummarySerializer
+from .scoring import (
+    PreTripScoreSummarySerializer,
+    PostChecklistScoreSummarySerializer,
+    FinalScoreSummarySerializer,
+)
 
 __all__ = [
     'DriverBasicSerializer',
@@ -68,4 +72,6 @@ __all__ = [
     'InspectionSignOffSerializer',
     'PreTripInspectionFullSerializer',
     'PreTripScoreSummarySerializer',
+    'PostChecklistScoreSummarySerializer',
+    'FinalScoreSummarySerializer',
 ]

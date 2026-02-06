@@ -170,6 +170,8 @@ export interface PreTripInspectionFull extends PreTripInspection {
   post_trip?: PostTripReport | null;
   risk_score?: RiskScoreSummary | null;
   pre_trip_score?: PreTripScoreSummary | null;
+  post_checklist_score?: PostChecklistScoreSummary | null;
+  final_score?: FinalScoreSummary | null;
   evaluation?: EvaluationSummary | null;
   
   // Vehicle checks (ForeignKey many)
@@ -214,12 +216,21 @@ export type UpdateInspectionData = Partial<CreateInspectionData>;
 
 // Health & Fitness Check
 
-export interface HealthFitnessScoreBreakdown {
+export interface HealthFitnessScoreItem {
   item: string;
-  weight: number;
-  earned: number;
+  earned: number; // 0 or 1
   status: string;
   critical: boolean;
+}
+
+export interface HealthFitnessScoreBreakdown {
+  items: HealthFitnessScoreItem[];
+  total: number;
+  max: number;
+  section_percentage: number; // Percentage within this section
+  total_percentage: number; // Percentage of total prechecklist
+  risk_level: SectionRiskLevel;
+  risk_display: string;
 }
 
 export interface HealthFitnessCheck extends BaseModel {
@@ -245,7 +256,7 @@ export interface HealthFitnessCheck extends BaseModel {
   fatigue_checklist_completed: boolean;
   fatigue_remarks?: string;
   
-  // Scoring
+  // Scoring (1 point per question)
   section_score?: number;
   max_possible_score?: number;
   score_earned?: number;
@@ -253,7 +264,7 @@ export interface HealthFitnessCheck extends BaseModel {
   score_percentage?: number;
   is_travel_cleared?: boolean;
   clearance_message?: string;
-  score_breakdown?: HealthFitnessScoreBreakdown[];
+  score_breakdown?: HealthFitnessScoreBreakdown;
 }
 
 export interface CreateHealthFitnessData {
@@ -339,50 +350,82 @@ export interface APIResponse<T> {
 
 // Pre-Trip Score Summary
 
-export type RiskStatus = 'low_risk' | 'moderate_risk' | 'high_risk' | 'critical_risk';
+export type RiskStatus = 'no_risk' | 'very_low_risk' | 'low_risk' | 'high_risk';
+
+export type SectionRiskLevel = 'no_risk' | 'very_low_risk' | 'low_risk' | 'high_risk';
 
 export interface SectionScoreSummary {
   section: string;
   score: number;
   max: number;
-  percentage: number;
+  section_percentage: number; // Percentage within this section (score/max * 100)
+  total_percentage: number; // Percentage of total prechecklist (score/64 * 100)
+  max_weight: number; // Max percentage this section can contribute
+  risk_level: SectionRiskLevel;
+  risk_display: string;
   questions?: number;
+  subtotal?: string;
 }
 
 export interface PreTripScoreSummary {
   id: string;
   inspection: string;
   
-  // Section scores
+  // Section scores with percentages and risk levels
   health_fitness_score: number;
   health_fitness_max: number;
   health_fitness_questions?: number;
+  health_fitness_percentage?: number;
+  health_fitness_risk?: SectionRiskLevel;
+  
   documentation_score: number;
   documentation_max: number;
   documentation_questions?: number;
+  documentation_percentage?: number;
+  documentation_risk?: SectionRiskLevel;
+  
   vehicle_exterior_score: number;
   vehicle_exterior_max: number;
   vehicle_exterior_questions?: number;
+  vehicle_exterior_percentage?: number;
+  vehicle_exterior_risk?: SectionRiskLevel;
+  
   engine_fluid_score: number;
   engine_fluid_max: number;
   engine_fluid_questions?: number;
+  engine_fluid_percentage?: number;
+  engine_fluid_risk?: SectionRiskLevel;
+  
   interior_cabin_score: number;
   interior_cabin_max: number;
   interior_cabin_questions?: number;
+  interior_cabin_percentage?: number;
+  interior_cabin_risk?: SectionRiskLevel;
+  
   functional_score: number;
   functional_max: number;
   functional_questions?: number;
+  functional_percentage?: number;
+  functional_risk?: SectionRiskLevel;
+  
   safety_equipment_score: number;
   safety_equipment_max: number;
   safety_equipment_questions?: number;
+  safety_equipment_percentage?: number;
+  safety_equipment_risk?: SectionRiskLevel;
+  
   brakes_steering_score?: number;
   brakes_steering_max?: number;
   brakes_steering_questions?: number;
+  brakes_steering_percentage?: number;
+  brakes_steering_risk?: SectionRiskLevel;
   
   // Overall scores
   total_score: number;
   max_possible_score: number;
   total_questions?: number;
+  total_prechecklist_questions?: number; // Always 64
+  section_weights?: Record<string, number>; // Weight of each section as % of total
   score_percentage: number;
   score_level: 'excellent' | 'good' | 'fair' | 'poor';
   score_level_display?: string;
@@ -405,6 +448,138 @@ export interface PreTripScoreSummary {
     total_questions: number;
     score_percentage: number;
     risk_status: RiskStatus;
+    risk_status_display?: string;
+  };
+  
+  created_at: string;
+  updated_at: string;
+}
+
+// Post-Checklist Score Summary
+export interface PostChecklistScoreSummary {
+  id: string;
+  inspection: string;
+  
+  // Trip Behavior Monitoring (12 questions)
+  trip_behavior_score: number;
+  trip_behavior_max: number;
+  trip_behavior_questions: number;
+  trip_behavior_percentage: number;
+  trip_behavior_risk: SectionRiskLevel;
+  trip_behavior_risk_display: string;
+  
+  // Driving Behavior Check (11 questions)
+  driving_behavior_score: number;
+  driving_behavior_max: number;
+  driving_behavior_questions: number;
+  driving_behavior_percentage: number;
+  driving_behavior_risk: SectionRiskLevel;
+  driving_behavior_risk_display: string;
+  
+  // Post-Trip Report (5 questions)
+  post_trip_report_score: number;
+  post_trip_report_max: number;
+  post_trip_report_questions: number;
+  post_trip_report_percentage: number;
+  post_trip_report_risk: SectionRiskLevel;
+  post_trip_report_risk_display: string;
+  
+  // Totals
+  total_score: number;
+  max_possible_score: number;
+  total_questions: number;
+  total_postchecklist_questions: number;
+  score_percentage: number;
+  
+  section_summary?: Array<{
+    section: string;
+    score: number;
+    max: number;
+    questions: number;
+    percentage: number;
+    risk_level: SectionRiskLevel;
+    risk_display: string;
+  }>;
+  
+  created_at: string;
+  updated_at: string;
+}
+
+// Final Risk Level
+export type FinalRiskLevel = 'no_risk' | 'very_low_risk' | 'low_risk' | 'high_risk';
+
+// Final Status
+export type FinalStatus = 'passed' | 'failed' | 'needs_review';
+
+// Final Score Summary (Pre-Checklist 50% + Post-Checklist 50%)
+export interface FinalScoreSummary {
+  id: string;
+  inspection: string;
+  
+  // Pre-Checklist component (50%)
+  pre_checklist_score: number;
+  pre_checklist_max: number;
+  pre_checklist_percentage: number;
+  pre_checklist_weighted: number;
+  
+  // Post-Checklist component (50%)
+  post_checklist_score: number;
+  post_checklist_max: number;
+  post_checklist_percentage: number;
+  post_checklist_weighted: number;
+  
+  // Final Results
+  final_percentage: number;
+  final_risk_level: FinalRiskLevel;
+  final_risk_display: string;
+  final_status: FinalStatus;
+  final_status_display: string;
+  final_comment: string;
+  
+  // Detailed breakdown
+  breakdown?: {
+    pre_checklist: {
+      name: string;
+      weight: number;
+      score: number;
+      max: number;
+      percentage: number;
+      weighted_contribution: number;
+      sections: Array<{
+        section: string;
+        score: number;
+        max: number;
+        questions: number;
+        percentage: number;
+        risk_level: SectionRiskLevel;
+        risk_display: string;
+      }>;
+    };
+    post_checklist: {
+      name: string;
+      weight: number;
+      score: number;
+      max: number;
+      percentage: number;
+      weighted_contribution: number;
+      sections: Array<{
+        section: string;
+        score: number;
+        max: number;
+        questions: number;
+        percentage: number;
+        risk_level: SectionRiskLevel;
+        risk_display: string;
+      }>;
+    };
+    final: {
+      percentage: number;
+      risk_level: FinalRiskLevel;
+      risk_display: string;
+      status: FinalStatus;
+      status_display: string;
+      comment: string;
+    };
   };
   
   created_at: string;

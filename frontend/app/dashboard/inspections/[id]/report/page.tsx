@@ -97,6 +97,21 @@ export default function InspectionReportPage() {
     }
   };
 
+  const getSectionRiskStyle = (risk: string | undefined) => {
+    switch (risk) {
+      case 'no_risk':
+        return { bg: '#e8f5e9', text: '#2e7d32', label: 'No Risk' };
+      case 'very_low_risk':
+        return { bg: '#e3f2fd', text: '#1565c0', label: 'Very Low Risk' };
+      case 'low_risk':
+        return { bg: '#fff3e0', text: '#ef6c00', label: 'Low Risk' };
+      case 'high_risk':
+        return { bg: '#ffebee', text: '#c62828', label: 'High Risk' };
+      default:
+        return { bg: '#f5f5f5', text: '#666', label: 'N/A' };
+    }
+  };
+
   const getPerformanceStyle = (level: string) => {
     switch (level) {
       case 'excellent':
@@ -333,6 +348,365 @@ export default function InspectionReportPage() {
             )}
           </div>
         </div>
+
+        {/* Pre-Trip Score Summary */}
+        {inspection.pre_trip_score && (
+          <div style={{ padding: '30px', borderBottom: '1px solid #eee' }}>
+            <h3 style={{ color: '#000', marginBottom: '20px', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span className="material-icons" style={{ fontSize: '20px' }}>analytics</span>
+              Pre-Trip Checklist Scores
+            </h3>
+            
+            {/* Overall Score */}
+            <div style={{ 
+              padding: '20px', 
+              backgroundColor: '#f8f9fa', 
+              borderRadius: '12px',
+              marginBottom: '20px',
+              border: '1px solid #e5e7eb',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+                <div>
+                  <span style={{ color: '#666', fontSize: '14px' }}>Total Score</span>
+                  <div style={{ fontSize: '32px', fontWeight: '700', color: '#000' }}>
+                    {inspection.pre_trip_score.total_score}/{inspection.pre_trip_score.max_possible_score}
+                  </div>
+                </div>
+                <div>
+                  <span style={{ color: '#666', fontSize: '14px' }}>Percentage</span>
+                  <div style={{ fontSize: '32px', fontWeight: '700', color: '#000' }}>
+                    {inspection.pre_trip_score.score_percentage.toFixed(1)}%
+                  </div>
+                </div>
+                <div style={{
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  ...(() => {
+                    const style = getSectionRiskStyle(inspection.pre_trip_score.risk_status);
+                    return { backgroundColor: style.bg, color: style.text };
+                  })(),
+                }}>
+                  {getSectionRiskStyle(inspection.pre_trip_score.risk_status).label}
+                </div>
+              </div>
+            </div>
+            
+            {/* Section Scores Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px' }}>
+              <SectionScoreCard 
+                label="Health & Fitness"
+                score={inspection.pre_trip_score.health_fitness_score}
+                maxScore={inspection.pre_trip_score.health_fitness_max}
+                percentage={inspection.pre_trip_score.health_fitness_percentage}
+                risk={inspection.pre_trip_score.health_fitness_risk}
+                getSectionRiskStyle={getSectionRiskStyle}
+              />
+              <SectionScoreCard 
+                label="Documentation"
+                score={inspection.pre_trip_score.documentation_score}
+                maxScore={inspection.pre_trip_score.documentation_max}
+                percentage={inspection.pre_trip_score.documentation_percentage}
+                risk={inspection.pre_trip_score.documentation_risk}
+                getSectionRiskStyle={getSectionRiskStyle}
+              />
+              <SectionScoreCard 
+                label="Vehicle Exterior"
+                score={inspection.pre_trip_score.vehicle_exterior_score}
+                maxScore={inspection.pre_trip_score.vehicle_exterior_max}
+                percentage={inspection.pre_trip_score.vehicle_exterior_percentage}
+                risk={inspection.pre_trip_score.vehicle_exterior_risk}
+                getSectionRiskStyle={getSectionRiskStyle}
+              />
+              <SectionScoreCard 
+                label="Engine & Fluid"
+                score={inspection.pre_trip_score.engine_fluid_score}
+                maxScore={inspection.pre_trip_score.engine_fluid_max}
+                percentage={inspection.pre_trip_score.engine_fluid_percentage}
+                risk={inspection.pre_trip_score.engine_fluid_risk}
+                getSectionRiskStyle={getSectionRiskStyle}
+              />
+              <SectionScoreCard 
+                label="Interior & Cabin"
+                score={inspection.pre_trip_score.interior_cabin_score}
+                maxScore={inspection.pre_trip_score.interior_cabin_max}
+                percentage={inspection.pre_trip_score.interior_cabin_percentage}
+                risk={inspection.pre_trip_score.interior_cabin_risk}
+                getSectionRiskStyle={getSectionRiskStyle}
+              />
+              <SectionScoreCard 
+                label="Functional Checks"
+                score={inspection.pre_trip_score.functional_score}
+                maxScore={inspection.pre_trip_score.functional_max}
+                percentage={inspection.pre_trip_score.functional_percentage}
+                risk={inspection.pre_trip_score.functional_risk}
+                getSectionRiskStyle={getSectionRiskStyle}
+              />
+              <SectionScoreCard 
+                label="Safety Equipment"
+                score={inspection.pre_trip_score.safety_equipment_score}
+                maxScore={inspection.pre_trip_score.safety_equipment_max}
+                percentage={inspection.pre_trip_score.safety_equipment_percentage}
+                risk={inspection.pre_trip_score.safety_equipment_risk}
+                getSectionRiskStyle={getSectionRiskStyle}
+              />
+              {inspection.pre_trip_score.brakes_steering_score !== undefined && (
+                <SectionScoreCard 
+                  label="Brakes & Steering"
+                  score={inspection.pre_trip_score.brakes_steering_score}
+                  maxScore={inspection.pre_trip_score.brakes_steering_max}
+                  percentage={inspection.pre_trip_score.brakes_steering_percentage}
+                  risk={inspection.pre_trip_score.brakes_steering_risk}
+                  getSectionRiskStyle={getSectionRiskStyle}
+                />
+              )}
+            </div>
+            
+            {/* Risk Level Guide */}
+            <div style={{ 
+              padding: '15px', 
+              backgroundColor: '#fff', 
+              borderRadius: '8px',
+              border: '1px solid #ddd',
+              marginTop: '20px',
+            }}>
+              <h4 style={{ color: '#000', fontSize: '14px', marginBottom: '10px' }}>Section Risk Level Guide</h4>
+              <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', fontSize: '13px' }}>
+                <span><strong style={{ color: '#2e7d32' }}>No Risk (100%)</strong> - Perfect</span>
+                <span><strong style={{ color: '#1565c0' }}>Very Low Risk (≥85%)</strong> - Good</span>
+                <span><strong style={{ color: '#ef6c00' }}>Low Risk (≥70%)</strong> - Acceptable</span>
+                <span><strong style={{ color: '#c62828' }}>High Risk (&lt;70%)</strong> - Needs Attention</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Post-Checklist Score Summary */}
+        {inspection.post_checklist_score && (
+          <div style={{ padding: '30px', borderBottom: '1px solid #eee' }}>
+            <h3 style={{ color: '#000', marginBottom: '20px', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span className="material-icons" style={{ fontSize: '20px' }}>fact_check</span>
+              Post-Checklist Scores
+            </h3>
+            
+            {/* Overall Post-Checklist Score */}
+            <div style={{ 
+              padding: '20px', 
+              backgroundColor: '#f8f9fa', 
+              borderRadius: '12px',
+              marginBottom: '20px',
+              border: '1px solid #e5e7eb',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+                <div>
+                  <span style={{ color: '#666', fontSize: '14px' }}>Total Score</span>
+                  <div style={{ fontSize: '32px', fontWeight: '700', color: '#000' }}>
+                    {inspection.post_checklist_score.total_score}/{inspection.post_checklist_score.max_possible_score}
+                  </div>
+                </div>
+                <div>
+                  <span style={{ color: '#666', fontSize: '14px' }}>Percentage</span>
+                  <div style={{ fontSize: '32px', fontWeight: '700', color: '#000' }}>
+                    {inspection.post_checklist_score.score_percentage?.toFixed(1) || '0.0'}%
+                  </div>
+                </div>
+                <div style={{
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  ...(() => {
+                    const style = getSectionRiskStyle(inspection.post_checklist_score.risk_status);
+                    return { backgroundColor: style.bg, color: style.text };
+                  })(),
+                }}>
+                  {getSectionRiskStyle(inspection.post_checklist_score.risk_status).label}
+                </div>
+              </div>
+            </div>
+            
+            {/* Post-Checklist Section Scores Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px' }}>
+              <SectionScoreCard 
+                label="Trip Behavior Monitoring"
+                score={inspection.post_checklist_score.trip_behavior_score}
+                maxScore={inspection.post_checklist_score.trip_behavior_max}
+                percentage={inspection.post_checklist_score.trip_behavior_percentage}
+                risk={inspection.post_checklist_score.trip_behavior_risk}
+                getSectionRiskStyle={getSectionRiskStyle}
+              />
+              <SectionScoreCard 
+                label="Driving Behavior Check"
+                score={inspection.post_checklist_score.driving_behavior_score}
+                maxScore={inspection.post_checklist_score.driving_behavior_max}
+                percentage={inspection.post_checklist_score.driving_behavior_percentage}
+                risk={inspection.post_checklist_score.driving_behavior_risk}
+                getSectionRiskStyle={getSectionRiskStyle}
+              />
+              <SectionScoreCard 
+                label="Post-Trip Report"
+                score={inspection.post_checklist_score.post_trip_report_score}
+                maxScore={inspection.post_checklist_score.post_trip_report_max}
+                percentage={inspection.post_checklist_score.post_trip_report_percentage}
+                risk={inspection.post_checklist_score.post_trip_report_risk}
+                getSectionRiskStyle={getSectionRiskStyle}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Final Score Summary */}
+        {inspection.final_score && (
+          <div style={{ padding: '30px', borderBottom: '1px solid #eee', backgroundColor: '#f0f4f8' }}>
+            <h3 style={{ color: '#000', marginBottom: '20px', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span className="material-icons" style={{ fontSize: '20px' }}>assessment</span>
+              Final Evaluation Report
+            </h3>
+            
+            {/* Final Score Summary Card */}
+            <div style={{ 
+              padding: '25px', 
+              backgroundColor: '#fff', 
+              borderRadius: '12px',
+              marginBottom: '20px',
+              border: '2px solid #1976d2',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+            }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+                <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                  <span style={{ color: '#666', fontSize: '12px', display: 'block', marginBottom: '5px' }}>Pre-Checklist (50%)</span>
+                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#000' }}>
+                    {inspection.final_score.pre_checklist_percentage?.toFixed(1) || '0.0'}%
+                  </div>
+                  <span style={{ color: '#666', fontSize: '11px' }}>
+                    Weighted: {inspection.final_score.pre_checklist_weighted?.toFixed(1) || '0.0'}%
+                  </span>
+                </div>
+                <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                  <span style={{ color: '#666', fontSize: '12px', display: 'block', marginBottom: '5px' }}>Post-Checklist (50%)</span>
+                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#000' }}>
+                    {inspection.final_score.post_checklist_percentage?.toFixed(1) || '0.0'}%
+                  </div>
+                  <span style={{ color: '#666', fontSize: '11px' }}>
+                    Weighted: {inspection.final_score.post_checklist_weighted?.toFixed(1) || '0.0'}%
+                  </span>
+                </div>
+                <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#e3f2fd', borderRadius: '8px', border: '1px solid #1976d2' }}>
+                  <span style={{ color: '#1976d2', fontSize: '12px', display: 'block', marginBottom: '5px' }}>Final Percentage</span>
+                  <div style={{ fontSize: '32px', fontWeight: '700', color: '#1976d2' }}>
+                    {inspection.final_score.final_percentage?.toFixed(1) || '0.0'}%
+                  </div>
+                </div>
+              </div>
+              
+              {/* Final Status & Risk Level */}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap', marginBottom: '20px' }}>
+                <div style={{
+                  padding: '12px 30px',
+                  borderRadius: '8px',
+                  fontWeight: '700',
+                  fontSize: '16px',
+                  ...(() => {
+                    const status = inspection.final_score.final_status;
+                    if (status === 'passed') return { backgroundColor: '#e8f5e9', color: '#2e7d32' };
+                    if (status === 'needs_review') return { backgroundColor: '#fff3e0', color: '#ef6c00' };
+                    return { backgroundColor: '#ffebee', color: '#c62828' };
+                  })(),
+                }}>
+                  Final Status: {inspection.final_score.final_status === 'passed' ? 'PASSED' : 
+                    inspection.final_score.final_status === 'needs_review' ? 'NEEDS REVIEW' : 'FAILED'}
+                </div>
+                <div style={{
+                  padding: '12px 30px',
+                  borderRadius: '8px',
+                  fontWeight: '700',
+                  fontSize: '16px',
+                  ...(() => {
+                    const style = getSectionRiskStyle(inspection.final_score.final_risk_level);
+                    return { backgroundColor: style.bg, color: style.text };
+                  })(),
+                }}>
+                  Risk Level: {getSectionRiskStyle(inspection.final_score.final_risk_level).label}
+                </div>
+              </div>
+              
+              {/* Final Comment */}
+              {inspection.final_score.final_comment && (
+                <div style={{ 
+                  padding: '15px', 
+                  backgroundColor: '#f5f5f5', 
+                  borderRadius: '8px',
+                  borderLeft: '4px solid #1976d2',
+                }}>
+                  <h4 style={{ color: '#333', fontSize: '14px', marginBottom: '8px' }}>Final Comment</h4>
+                  <p style={{ color: '#555', fontSize: '14px', margin: 0, lineHeight: '1.5' }}>
+                    {inspection.final_score.final_comment}
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            {/* Module Performance Breakdown */}
+            <div style={{ 
+              padding: '20px', 
+              backgroundColor: '#fff', 
+              borderRadius: '12px',
+              border: '1px solid #e5e7eb',
+            }}>
+              <h4 style={{ color: '#000', fontSize: '16px', marginBottom: '15px' }}>Module Performance Breakdown</h4>
+              
+              {/* Pre-Checklist Modules */}
+              <div style={{ marginBottom: '15px' }}>
+                <h5 style={{ color: '#666', fontSize: '13px', marginBottom: '10px', textTransform: 'uppercase' }}>Pre-Checklist Modules</h5>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
+                  {inspection.pre_trip_score && (
+                    <>
+                      <ModulePerformanceItem label="Health & Fitness" percentage={inspection.pre_trip_score.health_fitness_percentage} />
+                      <ModulePerformanceItem label="Documentation" percentage={inspection.pre_trip_score.documentation_percentage} />
+                      <ModulePerformanceItem label="Vehicle Exterior" percentage={inspection.pre_trip_score.vehicle_exterior_percentage} />
+                      <ModulePerformanceItem label="Engine & Fluid" percentage={inspection.pre_trip_score.engine_fluid_percentage} />
+                      <ModulePerformanceItem label="Interior & Cabin" percentage={inspection.pre_trip_score.interior_cabin_percentage} />
+                      <ModulePerformanceItem label="Functional Checks" percentage={inspection.pre_trip_score.functional_percentage} />
+                      <ModulePerformanceItem label="Safety Equipment" percentage={inspection.pre_trip_score.safety_equipment_percentage} />
+                      {inspection.pre_trip_score.brakes_steering_percentage !== undefined && (
+                        <ModulePerformanceItem label="Brakes & Steering" percentage={inspection.pre_trip_score.brakes_steering_percentage} />
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              {/* Post-Checklist Modules */}
+              <div>
+                <h5 style={{ color: '#666', fontSize: '13px', marginBottom: '10px', textTransform: 'uppercase' }}>Post-Checklist Modules</h5>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
+                  {inspection.post_checklist_score && (
+                    <>
+                      <ModulePerformanceItem label="Trip Behavior" percentage={inspection.post_checklist_score.trip_behavior_percentage} />
+                      <ModulePerformanceItem label="Driving Behavior" percentage={inspection.post_checklist_score.driving_behavior_percentage} />
+                      <ModulePerformanceItem label="Post-Trip Report" percentage={inspection.post_checklist_score.post_trip_report_percentage} />
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* Final Status Guide */}
+            <div style={{ 
+              padding: '15px', 
+              backgroundColor: '#fff', 
+              borderRadius: '8px',
+              border: '1px solid #ddd',
+              marginTop: '20px',
+            }}>
+              <h4 style={{ color: '#000', fontSize: '14px', marginBottom: '10px' }}>Final Status Guide</h4>
+              <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', fontSize: '13px' }}>
+                <span><strong style={{ color: '#2e7d32' }}>Passed (≥70%)</strong> - Driver cleared</span>
+                <span><strong style={{ color: '#ef6c00' }}>Needs Review (≥50%)</strong> - Requires attention</span>
+                <span><strong style={{ color: '#c62828' }}>Failed (&lt;50%)</strong> - Immediate action required</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Pre-Trip Section */}
         <div style={{ padding: '30px', borderBottom: '1px solid #eee', backgroundColor: '#fafafa' }}>
@@ -769,6 +1143,90 @@ function ScoreItem({ label, score }: { label: string; score: number }) {
     }}>
       <span style={{ color: '#666', fontSize: '12px', display: 'block', marginBottom: '5px' }}>{label}</span>
       <span style={{ fontSize: '24px', fontWeight: '700', color: '#000' }}>{score}/5</span>
+    </div>
+  );
+}
+
+function SectionScoreCard({ 
+  label, 
+  score, 
+  maxScore, 
+  percentage, 
+  risk,
+  getSectionRiskStyle 
+}: { 
+  label: string; 
+  score: number; 
+  maxScore?: number; 
+  percentage?: number; 
+  risk?: string;
+  getSectionRiskStyle: (risk: string | undefined) => { bg: string; text: string; label: string };
+}) {
+  const riskStyle = getSectionRiskStyle(risk);
+  return (
+    <div style={{ 
+      padding: '15px', 
+      backgroundColor: '#fff', 
+      borderRadius: '8px',
+      border: '1px solid #e5e7eb',
+      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+        <span style={{ color: '#374151', fontSize: '13px', fontWeight: '600' }}>{label}</span>
+        <span style={{
+          padding: '3px 8px',
+          borderRadius: '4px',
+          fontSize: '11px',
+          fontWeight: '600',
+          backgroundColor: riskStyle.bg,
+          color: riskStyle.text,
+        }}>
+          {riskStyle.label}
+        </span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+        <span style={{ fontSize: '24px', fontWeight: '700', color: '#000' }}>{score}/{maxScore || 0}</span>
+        <span style={{ fontSize: '14px', color: '#666' }}>pts</span>
+      </div>
+      <div style={{ marginTop: '8px', color: '#666', fontSize: '12px' }}>
+        {percentage !== undefined ? `${percentage.toFixed(2)}% of total` : 'N/A'}
+      </div>
+    </div>
+  );
+}
+
+function ModulePerformanceItem({ 
+  label, 
+  percentage, 
+}: { 
+  label: string; 
+  percentage?: number; 
+}) {
+  const getPerformanceColor = (pct: number | undefined): string => {
+    if (pct === undefined) return '#666';
+    if (pct === 100) return '#2e7d32';
+    if (pct >= 85) return '#1565c0';
+    if (pct >= 70) return '#ef6c00';
+    return '#c62828';
+  };
+  
+  return (
+    <div style={{ 
+      padding: '10px 12px', 
+      backgroundColor: '#f8f9fa', 
+      borderRadius: '6px',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    }}>
+      <span style={{ color: '#374151', fontSize: '12px', fontWeight: '500' }}>{label}</span>
+      <span style={{ 
+        color: getPerformanceColor(percentage), 
+        fontSize: '13px', 
+        fontWeight: '700' 
+      }}>
+        {percentage !== undefined ? `${percentage.toFixed(0)}%` : 'N/A'}
+      </span>
     </div>
   );
 }
