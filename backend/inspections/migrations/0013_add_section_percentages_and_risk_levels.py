@@ -10,10 +10,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AlterUniqueTogether(
-            name='inspectionsignoff',
-            unique_together=set(),
-        ),
+        # AlterUniqueTogether removed - unique_together constraint doesn't exist in database
+        # (model uses UniqueConstraint instead, created in 0005)
         migrations.AddField(
             model_name='pretripscoresummary',
             name='brakes_steering_percentage',

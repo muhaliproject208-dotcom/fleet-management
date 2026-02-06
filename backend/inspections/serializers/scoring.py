@@ -137,6 +137,7 @@ class PostChecklistScoreSummarySerializer(serializers.ModelSerializer):
     driving_behavior_risk_display = serializers.SerializerMethodField()
     post_trip_report_risk_display = serializers.SerializerMethodField()
     total_postchecklist_questions = serializers.SerializerMethodField()
+    risk_status_display = serializers.SerializerMethodField()
     
     class Meta:
         model = PostChecklistScoreSummary
@@ -170,6 +171,8 @@ class PostChecklistScoreSummarySerializer(serializers.ModelSerializer):
             'total_questions',
             'total_postchecklist_questions',
             'score_percentage',
+            'risk_status',
+            'risk_status_display',
             'section_summary',
             'created_at',
             'updated_at',
@@ -193,6 +196,10 @@ class PostChecklistScoreSummarySerializer(serializers.ModelSerializer):
     
     def get_total_postchecklist_questions(self, obj):
         return TOTAL_POSTCHECKLIST_QUESTIONS
+    
+    def get_risk_status_display(self, obj):
+        from ..models import get_section_risk_display
+        return get_section_risk_display(obj.risk_status)
 
 
 class FinalScoreSummarySerializer(serializers.ModelSerializer):

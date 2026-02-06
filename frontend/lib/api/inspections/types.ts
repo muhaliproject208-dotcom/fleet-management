@@ -490,6 +490,8 @@ export interface PostChecklistScoreSummary {
   total_questions: number;
   total_postchecklist_questions: number;
   score_percentage: number;
+  risk_status: SectionRiskLevel;
+  risk_status_display: string;
   
   section_summary?: Array<{
     section: string;

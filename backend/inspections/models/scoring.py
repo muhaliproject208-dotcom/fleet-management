@@ -1127,6 +1127,12 @@ class PostChecklistScoreSummary(models.Model):
         default=Decimal('0'),
         help_text="Overall post-checklist percentage"
     )
+    risk_status = models.CharField(
+        max_length=20,
+        choices=SectionRiskLevel.choices,
+        default=SectionRiskLevel.HIGH_RISK,
+        help_text="Overall post-checklist risk status"
+    )
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -1237,6 +1243,7 @@ class PostChecklistScoreSummary(models.Model):
             self.score_percentage = round(
                 (self.total_score / self.max_possible_score) * 100, 2
             )
+            self.risk_status = get_section_risk_level(float(self.score_percentage))
     
     def save(self, *args, **kwargs):
         """Auto-calculate scores before saving"""

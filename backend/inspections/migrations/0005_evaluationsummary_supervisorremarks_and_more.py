@@ -63,7 +63,6 @@ class Migration(migrations.Migration):
                 'verbose_name_plural': 'Inspection Sign-Offs',
                 'ordering': ['-signed_at'],
                 'constraints': [models.UniqueConstraint(fields=('inspection', 'role'), name='unique_inspection_role_signoff')],
-                'unique_together': {('inspection', 'role')},
             },
         ),
     ]
