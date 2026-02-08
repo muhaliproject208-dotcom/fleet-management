@@ -18,6 +18,56 @@ export default function InspectionReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [downloading, setDownloading] = useState(false);
+  const [downloadingSection, setDownloadingSection] = useState<string | null>(null);
+
+  // Section names mapping for PDF download
+  const SECTION_NAMES: Record<string, string> = {
+    'health_fitness': 'Health & Fitness',
+    'documentation': 'Documentation',
+    'exterior': 'Vehicle Exterior',
+    'engine': 'Engine & Fluid',
+    'interior': 'Interior & Cabin',
+    'functional': 'Functional Checks',
+    'safety': 'Safety Equipment',
+    'brakes_steering': 'Brakes & Steering',
+  };
+
+  const downloadSectionPDF = async (sectionName: string) => {
+    if (!inspection) return;
+    
+    setDownloadingSection(sectionName);
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(
+        `${API_URL}/inspections/${id}/download_section_pdf/${sectionName}/`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to generate section PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${inspection.inspection_id}-${sectionName}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Section PDF download error:', err);
+      setError(`Failed to download ${SECTION_NAMES[sectionName] || sectionName} PDF`);
+    } finally {
+      setDownloadingSection(null);
+    }
+  };
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -401,6 +451,9 @@ export default function InspectionReportPage() {
                 percentage={inspection.pre_trip_score.health_fitness_percentage}
                 risk={inspection.pre_trip_score.health_fitness_risk}
                 getSectionRiskStyle={getSectionRiskStyle}
+                sectionKey="health_fitness"
+                onDownload={downloadSectionPDF}
+                isDownloading={downloadingSection === 'health_fitness'}
               />
               <SectionScoreCard 
                 label="Documentation"
@@ -409,6 +462,9 @@ export default function InspectionReportPage() {
                 percentage={inspection.pre_trip_score.documentation_percentage}
                 risk={inspection.pre_trip_score.documentation_risk}
                 getSectionRiskStyle={getSectionRiskStyle}
+                sectionKey="documentation"
+                onDownload={downloadSectionPDF}
+                isDownloading={downloadingSection === 'documentation'}
               />
               <SectionScoreCard 
                 label="Vehicle Exterior"
@@ -417,6 +473,9 @@ export default function InspectionReportPage() {
                 percentage={inspection.pre_trip_score.vehicle_exterior_percentage}
                 risk={inspection.pre_trip_score.vehicle_exterior_risk}
                 getSectionRiskStyle={getSectionRiskStyle}
+                sectionKey="exterior"
+                onDownload={downloadSectionPDF}
+                isDownloading={downloadingSection === 'exterior'}
               />
               <SectionScoreCard 
                 label="Engine & Fluid"
@@ -425,6 +484,9 @@ export default function InspectionReportPage() {
                 percentage={inspection.pre_trip_score.engine_fluid_percentage}
                 risk={inspection.pre_trip_score.engine_fluid_risk}
                 getSectionRiskStyle={getSectionRiskStyle}
+                sectionKey="engine"
+                onDownload={downloadSectionPDF}
+                isDownloading={downloadingSection === 'engine'}
               />
               <SectionScoreCard 
                 label="Interior & Cabin"
@@ -433,6 +495,9 @@ export default function InspectionReportPage() {
                 percentage={inspection.pre_trip_score.interior_cabin_percentage}
                 risk={inspection.pre_trip_score.interior_cabin_risk}
                 getSectionRiskStyle={getSectionRiskStyle}
+                sectionKey="interior"
+                onDownload={downloadSectionPDF}
+                isDownloading={downloadingSection === 'interior'}
               />
               <SectionScoreCard 
                 label="Functional Checks"
@@ -441,6 +506,9 @@ export default function InspectionReportPage() {
                 percentage={inspection.pre_trip_score.functional_percentage}
                 risk={inspection.pre_trip_score.functional_risk}
                 getSectionRiskStyle={getSectionRiskStyle}
+                sectionKey="functional"
+                onDownload={downloadSectionPDF}
+                isDownloading={downloadingSection === 'functional'}
               />
               <SectionScoreCard 
                 label="Safety Equipment"
@@ -449,6 +517,9 @@ export default function InspectionReportPage() {
                 percentage={inspection.pre_trip_score.safety_equipment_percentage}
                 risk={inspection.pre_trip_score.safety_equipment_risk}
                 getSectionRiskStyle={getSectionRiskStyle}
+                sectionKey="safety"
+                onDownload={downloadSectionPDF}
+                isDownloading={downloadingSection === 'safety'}
               />
               {inspection.pre_trip_score.brakes_steering_score !== undefined && (
                 <SectionScoreCard 
@@ -458,6 +529,9 @@ export default function InspectionReportPage() {
                   percentage={inspection.pre_trip_score.brakes_steering_percentage}
                   risk={inspection.pre_trip_score.brakes_steering_risk}
                   getSectionRiskStyle={getSectionRiskStyle}
+                  sectionKey="brakes_steering"
+                  onDownload={downloadSectionPDF}
+                  isDownloading={downloadingSection === 'brakes_steering'}
                 />
               )}
             </div>
@@ -1153,7 +1227,10 @@ function SectionScoreCard({
   maxScore, 
   percentage, 
   risk,
-  getSectionRiskStyle 
+  getSectionRiskStyle,
+  sectionKey,
+  onDownload,
+  isDownloading,
 }: { 
   label: string; 
   score: number; 
@@ -1161,6 +1238,9 @@ function SectionScoreCard({
   percentage?: number; 
   risk?: string;
   getSectionRiskStyle: (risk: string | undefined) => { bg: string; text: string; label: string };
+  sectionKey?: string;
+  onDownload?: (sectionKey: string) => void;
+  isDownloading?: boolean;
 }) {
   const riskStyle = getSectionRiskStyle(risk);
   return (
@@ -1191,6 +1271,31 @@ function SectionScoreCard({
       <div style={{ marginTop: '8px', color: '#666', fontSize: '12px' }}>
         {percentage !== undefined ? `${percentage.toFixed(2)}% of total` : 'N/A'}
       </div>
+      {sectionKey && onDownload && (
+        <button
+          onClick={() => onDownload(sectionKey)}
+          disabled={isDownloading}
+          style={{
+            marginTop: '10px',
+            padding: '6px 12px',
+            backgroundColor: isDownloading ? '#ccc' : '#000',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '4px',
+            fontSize: '11px',
+            fontWeight: '500',
+            cursor: isDownloading ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            width: '100%',
+            justifyContent: 'center',
+          }}
+        >
+          <span className="material-icons" style={{ fontSize: '14px' }}>download</span>
+          {isDownloading ? 'Downloading...' : 'Download PDF'}
+        </button>
+      )}
     </div>
   );
 }
