@@ -1500,6 +1500,7 @@ export default function NewInspectionWizard() {
     
     const sectionKey = sectionKeyMap[currentStep];
     const isSectionSaved = sectionKey ? savedSections[sectionKey] : false;
+    const canDownload = inspectionId && isSectionSaved;
     
     return (
       <div style={{ 
@@ -1509,21 +1510,37 @@ export default function NewInspectionWizard() {
         marginBottom: '20px' 
       }}>
         <h2 style={{ color: '#000', margin: 0 }}>{getFormTitle()}</h2>
-        {showDownload && inspectionId && isSectionSaved && (
+        {showDownload && currentStep >= 2 && currentStep <= 9 && (
           <button
-            onClick={() => downloadSectionPdf(currentStep)}
+            onClick={() => {
+              if (!inspectionId) {
+                setError('Please save this section first by clicking "Next" before downloading the PDF.');
+                return;
+              }
+              if (!isSectionSaved) {
+                setError('Please save this section first by clicking "Next" before downloading the PDF.');
+                return;
+              }
+              downloadSectionPdf(currentStep);
+            }}
             disabled={loading}
-            className="button-secondary"
             style={{ 
-              width: 'auto', 
               padding: '8px 16px', 
-              fontSize: '14px',
+              fontSize: '13px',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              backgroundColor: canDownload ? '#000' : '#9ca3af',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
             }}
           >
-            <span>📄</span> Download PDF
+            <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
+            {canDownload ? 'Download PDF' : 'Save to Download PDF'}
           </button>
         )}
       </div>
