@@ -2434,19 +2434,12 @@ export default function NewInspectionWizard() {
                     <button
                       onClick={() => downloadSectionPdf(currentStep)}
                       disabled={loading}
+                      className="button-secondary"
                       style={{ 
-                        padding: '10px 20px', 
-                        fontSize: '14px',
+                        width: 'auto',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
-                        backgroundColor: '#000',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: loading ? 'not-allowed' : 'pointer',
-                        flexShrink: 0,
-                        whiteSpace: 'nowrap',
                       }}
                     >
                       <span className="material-icons" style={{ fontSize: '18px' }}>download</span>
