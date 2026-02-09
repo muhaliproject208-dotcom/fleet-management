@@ -14,11 +14,7 @@ import { RadioOption, CheckItem } from '../components/FormComponents';
 import { getFriendlyErrorMessage } from '@/lib/utils/errorMessages';
 import {
   TOTAL_PRECHECKLIST_QUESTIONS,
-  SECTION_QUESTIONS,
-  SECTION_WEIGHTS,
-  SECTION_NAMES,
   calculateLiveScore,
-  type SectionKey,
   type LiveScoreResult,
 } from '@/lib/utils/scoring';
 
@@ -390,8 +386,6 @@ export default function NewInspectionWizard() {
         const answered = checks.filter(c => c.status !== null).length;
         const passed = checks.filter(c => c.status === 'pass').length;
         return calculateLiveScore('brakes_steering', passed, answered);
-          percentage: answered > 0 ? Math.round((passed / answered) * 100) : 0,
-        };
       }
       
       default:
