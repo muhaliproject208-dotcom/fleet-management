@@ -7,6 +7,7 @@ import { getInspection, approveInspection, rejectInspection, downloadPrechecklis
 import { PreTripInspectionFull, InspectionStatus } from '@/lib/api/inspections/types';
 import InspectionStatusBadge from '../components/InspectionStatusBadge';
 import { getFriendlyErrorMessage } from '@/lib/utils/errorMessages';
+import { API_URL } from '@/lib/api';
 
 export default function InspectionDetailPage() {
   const router = useRouter();
@@ -24,6 +25,56 @@ export default function InspectionDetailPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [userRole, setUserRole] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [downloadingSection, setDownloadingSection] = useState<string | null>(null);
+
+  // Section names mapping for display
+  const SECTION_NAMES: Record<string, string> = {
+    'health_fitness': 'Health & Fitness',
+    'documentation': 'Documentation',
+    'exterior': 'Vehicle Exterior',
+    'engine': 'Engine & Fluid',
+    'interior': 'Interior & Cabin',
+    'functional': 'Functional Checks',
+    'safety': 'Safety Equipment',
+    'brakes_steering': 'Brakes & Steering',
+  };
+
+  const downloadSectionPDF = async (sectionName: string) => {
+    if (!inspection) return;
+    
+    setDownloadingSection(sectionName);
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(
+        `${API_URL}/inspections/${id}/download_section_pdf/${sectionName}/`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to generate section PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${inspection.inspection_id}-${sectionName}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Section PDF download error:', err);
+      setError(`Failed to download ${SECTION_NAMES[sectionName] || sectionName} PDF`);
+    } finally {
+      setDownloadingSection(null);
+    }
+  };
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -557,10 +608,31 @@ export default function InspectionDetailPage() {
       {/* Health & Fitness Check */}
       {inspection.health_fitness && (
         <div className="profile-card" style={{ marginTop: '20px' }}>
-          <h3 style={{ color: '#000', marginBottom: '15px', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span className="material-icons" style={{ fontSize: '20px', color: '#000' }}>health_and_safety</span>
-            Health & Fitness Check
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h3 style={{ color: '#000', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+              <span className="material-icons" style={{ fontSize: '20px', color: '#000' }}>health_and_safety</span>
+              Health & Fitness Check
+            </h3>
+            <button
+              onClick={() => downloadSectionPDF('health_fitness')}
+              disabled={downloadingSection === 'health_fitness'}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: downloadingSection === 'health_fitness' ? '#ccc' : '#000',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '12px',
+                cursor: downloadingSection === 'health_fitness' ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
+              {downloadingSection === 'health_fitness' ? 'Downloading...' : 'Download PDF'}
+            </button>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
             <CheckItem 
               label="Alcohol Test" 
@@ -592,10 +664,31 @@ export default function InspectionDetailPage() {
       {/* Documentation & Compliance */}
       {inspection.documentation && (
         <div className="profile-card" style={{ marginTop: '20px' }}>
-          <h3 style={{ color: '#000', marginBottom: '15px', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span className="material-icons" style={{ fontSize: '20px', color: '#000' }}>description</span>
-            Documentation & Compliance
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h3 style={{ color: '#000', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+              <span className="material-icons" style={{ fontSize: '20px', color: '#000' }}>description</span>
+              Documentation & Compliance
+            </h3>
+            <button
+              onClick={() => downloadSectionPDF('documentation')}
+              disabled={downloadingSection === 'documentation'}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: downloadingSection === 'documentation' ? '#ccc' : '#000',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '12px',
+                cursor: downloadingSection === 'documentation' ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
+              {downloadingSection === 'documentation' ? 'Downloading...' : 'Download PDF'}
+            </button>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
             <CheckItem 
               label="Certificate of Fitness" 
@@ -626,10 +719,31 @@ export default function InspectionDetailPage() {
       {/* Vehicle Exterior Checks */}
       {inspection.exterior_checks && inspection.exterior_checks.length > 0 && (
         <div className="profile-card" style={{ marginTop: '20px' }}>
-          <h3 style={{ color: '#000', marginBottom: '15px', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span className="material-icons" style={{ fontSize: '20px', color: '#000' }}>directions_car</span>
-            Vehicle Exterior Checks
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h3 style={{ color: '#000', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+              <span className="material-icons" style={{ fontSize: '20px', color: '#000' }}>directions_car</span>
+              Vehicle Exterior Checks
+            </h3>
+            <button
+              onClick={() => downloadSectionPDF('exterior')}
+              disabled={downloadingSection === 'exterior'}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: downloadingSection === 'exterior' ? '#ccc' : '#000',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '12px',
+                cursor: downloadingSection === 'exterior' ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
+              {downloadingSection === 'exterior' ? 'Downloading...' : 'Download PDF'}
+            </button>
+          </div>
           <VehicleCheckTable checks={inspection.exterior_checks} />
         </div>
       )}
@@ -637,10 +751,31 @@ export default function InspectionDetailPage() {
       {/* Engine & Fluid Checks */}
       {inspection.engine_fluid_checks && inspection.engine_fluid_checks.length > 0 && (
         <div className="profile-card" style={{ marginTop: '20px' }}>
-          <h3 style={{ color: '#000', marginBottom: '15px', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span className="material-icons" style={{ fontSize: '20px', color: '#000' }}>build</span>
-            Engine & Fluid Checks
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h3 style={{ color: '#000', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+              <span className="material-icons" style={{ fontSize: '20px', color: '#000' }}>build</span>
+              Engine & Fluid Checks
+            </h3>
+            <button
+              onClick={() => downloadSectionPDF('engine')}
+              disabled={downloadingSection === 'engine'}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: downloadingSection === 'engine' ? '#ccc' : '#000',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '12px',
+                cursor: downloadingSection === 'engine' ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
+              {downloadingSection === 'engine' ? 'Downloading...' : 'Download PDF'}
+            </button>
+          </div>
           <VehicleCheckTable checks={inspection.engine_fluid_checks} />
         </div>
       )}
@@ -648,10 +783,31 @@ export default function InspectionDetailPage() {
       {/* Interior & Cabin Checks */}
       {inspection.interior_cabin_checks && inspection.interior_cabin_checks.length > 0 && (
         <div className="profile-card" style={{ marginTop: '20px' }}>
-          <h3 style={{ color: '#000', marginBottom: '15px', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span className="material-icons" style={{ fontSize: '20px', color: '#000' }}>airline_seat_recline_normal</span>
-            Interior & Cabin Checks
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h3 style={{ color: '#000', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+              <span className="material-icons" style={{ fontSize: '20px', color: '#000' }}>airline_seat_recline_normal</span>
+              Interior & Cabin Checks
+            </h3>
+            <button
+              onClick={() => downloadSectionPDF('interior')}
+              disabled={downloadingSection === 'interior'}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: downloadingSection === 'interior' ? '#ccc' : '#000',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '12px',
+                cursor: downloadingSection === 'interior' ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
+              {downloadingSection === 'interior' ? 'Downloading...' : 'Download PDF'}
+            </button>
+          </div>
           <VehicleCheckTable checks={inspection.interior_cabin_checks} />
         </div>
       )}
@@ -659,10 +815,31 @@ export default function InspectionDetailPage() {
       {/* Functional Checks */}
       {inspection.functional_checks && inspection.functional_checks.length > 0 && (
         <div className="profile-card" style={{ marginTop: '20px' }}>
-          <h3 style={{ color: '#000', marginBottom: '15px', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span className="material-icons" style={{ fontSize: '20px', color: '#000' }}>settings</span>
-            Functional Checks
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h3 style={{ color: '#000', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+              <span className="material-icons" style={{ fontSize: '20px', color: '#000' }}>settings</span>
+              Functional Checks
+            </h3>
+            <button
+              onClick={() => downloadSectionPDF('functional')}
+              disabled={downloadingSection === 'functional'}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: downloadingSection === 'functional' ? '#ccc' : '#000',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '12px',
+                cursor: downloadingSection === 'functional' ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
+              {downloadingSection === 'functional' ? 'Downloading...' : 'Download PDF'}
+            </button>
+          </div>
           <VehicleCheckTable checks={inspection.functional_checks} />
         </div>
       )}
@@ -670,11 +847,78 @@ export default function InspectionDetailPage() {
       {/* Safety Equipment Checks */}
       {inspection.safety_equipment_checks && inspection.safety_equipment_checks.length > 0 && (
         <div className="profile-card" style={{ marginTop: '20px' }}>
-          <h3 style={{ color: '#000', marginBottom: '15px', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span className="material-icons" style={{ fontSize: '20px', color: '#000' }}>security</span>
-            Safety Equipment Checks
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h3 style={{ color: '#000', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+              <span className="material-icons" style={{ fontSize: '20px', color: '#000' }}>security</span>
+              Safety Equipment Checks
+            </h3>
+            <button
+              onClick={() => downloadSectionPDF('safety')}
+              disabled={downloadingSection === 'safety'}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: downloadingSection === 'safety' ? '#ccc' : '#000',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '12px',
+                cursor: downloadingSection === 'safety' ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
+              {downloadingSection === 'safety' ? 'Downloading...' : 'Download PDF'}
+            </button>
+          </div>
           <VehicleCheckTable checks={inspection.safety_equipment_checks} />
+        </div>
+      )}
+
+      {/* Brakes & Steering Checks */}
+      {inspection.brakes_steering_checks && inspection.brakes_steering_checks.length > 0 && (
+        <div className="profile-card" style={{ marginTop: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h3 style={{ color: '#000', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+              <span className="material-icons" style={{ fontSize: '20px', color: '#c62828' }}>warning</span>
+              Brakes & Steering Checks (Critical)
+            </h3>
+            <button
+              onClick={() => downloadSectionPDF('brakes_steering')}
+              disabled={downloadingSection === 'brakes_steering'}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: downloadingSection === 'brakes_steering' ? '#ccc' : '#000',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '12px',
+                cursor: downloadingSection === 'brakes_steering' ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
+              {downloadingSection === 'brakes_steering' ? 'Downloading...' : 'Download PDF'}
+            </button>
+          </div>
+          <div style={{ 
+            padding: '10px 15px', 
+            backgroundColor: '#FFF3CD', 
+            borderRadius: '6px',
+            marginBottom: '15px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}>
+            <span className="material-icons" style={{ color: '#856404', fontSize: '18px' }}>warning</span>
+            <span style={{ color: '#856404', fontSize: '13px', fontWeight: '500' }}>
+              All items in this section are critical - failures will prevent travel clearance
+            </span>
+          </div>
+          <VehicleCheckTable checks={inspection.brakes_steering_checks} />
         </div>
       )}
 
