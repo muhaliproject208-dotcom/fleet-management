@@ -7,6 +7,11 @@ import { getInspection } from '@/lib/api/inspections';
 import { API_URL } from '@/lib/api';
 import { PreTripInspectionFull } from '@/lib/api/inspections/types';
 import InspectionStatusBadge from '../../components/InspectionStatusBadge';
+import { 
+  TOTAL_PRECHECKLIST_QUESTIONS, 
+  SECTION_QUESTIONS, 
+  SECTION_WEIGHTS 
+} from '@/lib/utils/scoring';
 
 export default function InspectionReportPage() {
   const router = useRouter();
@@ -440,6 +445,89 @@ export default function InspectionReportPage() {
                   {getSectionRiskStyle(inspection.pre_trip_score.risk_status).label}
                 </div>
               </div>
+            </div>
+            
+            {/* Score Breakdown Table */}
+            <div style={{ 
+              marginBottom: '20px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              overflow: 'hidden',
+            }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#000', color: '#fff' }}>
+                    <th style={{ padding: '12px 15px', textAlign: 'left', fontWeight: '600' }}>Section</th>
+                    <th style={{ padding: '12px 15px', textAlign: 'center', fontWeight: '600' }}>Questions</th>
+                    <th style={{ padding: '12px 15px', textAlign: 'center', fontWeight: '600' }}>Subtotal</th>
+                    <th style={{ padding: '12px 15px', textAlign: 'center', fontWeight: '600' }}>Max %</th>
+                    <th style={{ padding: '12px 15px', textAlign: 'center', fontWeight: '600' }}>Earned %</th>
+                    <th style={{ padding: '12px 15px', textAlign: 'center', fontWeight: '600' }}>Risk Level</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { key: 'health_fitness', label: 'Health & Fitness', score: inspection.pre_trip_score.health_fitness_score, max: inspection.pre_trip_score.health_fitness_max, risk: inspection.pre_trip_score.health_fitness_risk },
+                    { key: 'documentation', label: 'Documentation', score: inspection.pre_trip_score.documentation_score, max: inspection.pre_trip_score.documentation_max, risk: inspection.pre_trip_score.documentation_risk },
+                    { key: 'vehicle_exterior', label: 'Vehicle Exterior', score: inspection.pre_trip_score.vehicle_exterior_score, max: inspection.pre_trip_score.vehicle_exterior_max, risk: inspection.pre_trip_score.vehicle_exterior_risk },
+                    { key: 'engine_fluid', label: 'Engine & Fluid', score: inspection.pre_trip_score.engine_fluid_score, max: inspection.pre_trip_score.engine_fluid_max, risk: inspection.pre_trip_score.engine_fluid_risk },
+                    { key: 'interior_cabin', label: 'Interior & Cabin', score: inspection.pre_trip_score.interior_cabin_score, max: inspection.pre_trip_score.interior_cabin_max, risk: inspection.pre_trip_score.interior_cabin_risk },
+                    { key: 'functional', label: 'Functional Checks', score: inspection.pre_trip_score.functional_score, max: inspection.pre_trip_score.functional_max, risk: inspection.pre_trip_score.functional_risk },
+                    { key: 'safety_equipment', label: 'Safety Equipment', score: inspection.pre_trip_score.safety_equipment_score, max: inspection.pre_trip_score.safety_equipment_max, risk: inspection.pre_trip_score.safety_equipment_risk },
+                    { key: 'brakes_steering', label: 'Brakes & Steering', score: inspection.pre_trip_score.brakes_steering_score, max: inspection.pre_trip_score.brakes_steering_max, risk: inspection.pre_trip_score.brakes_steering_risk },
+                  ].map((section, idx) => {
+                    const questions = SECTION_QUESTIONS[section.key as keyof typeof SECTION_QUESTIONS] || 0;
+                    const maxWeight = SECTION_WEIGHTS[section.key as keyof typeof SECTION_WEIGHTS] || 0;
+                    const earnedWeight = ((section.score || 0) * 100) / TOTAL_PRECHECKLIST_QUESTIONS;
+                    const riskStyle = getSectionRiskStyle(section.risk);
+                    return (
+                      <tr key={section.key} style={{ borderBottom: '1px solid #e5e7eb', backgroundColor: idx % 2 === 0 ? '#fff' : '#f9fafb' }}>
+                        <td style={{ padding: '10px 15px', fontWeight: '500' }}>{section.label}</td>
+                        <td style={{ padding: '10px 15px', textAlign: 'center' }}>{questions}</td>
+                        <td style={{ padding: '10px 15px', textAlign: 'center' }}>{section.score || 0}/{section.max || 0}</td>
+                        <td style={{ padding: '10px 15px', textAlign: 'center', fontWeight: '600' }}>{maxWeight.toFixed(2)}%</td>
+                        <td style={{ padding: '10px 15px', textAlign: 'center', fontWeight: '600' }}>{earnedWeight.toFixed(2)}%</td>
+                        <td style={{ padding: '10px 15px', textAlign: 'center' }}>
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '3px 10px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            backgroundColor: riskStyle.bg,
+                            color: riskStyle.text,
+                          }}>
+                            {riskStyle.label}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {/* Totals Row */}
+                  <tr style={{ backgroundColor: '#f3f4f6', fontWeight: '700', borderTop: '2px solid #000' }}>
+                    <td style={{ padding: '12px 15px' }}>TOTAL</td>
+                    <td style={{ padding: '12px 15px', textAlign: 'center' }}>{TOTAL_PRECHECKLIST_QUESTIONS}</td>
+                    <td style={{ padding: '12px 15px', textAlign: 'center' }}>{inspection.pre_trip_score.total_score}/{inspection.pre_trip_score.max_possible_score}</td>
+                    <td style={{ padding: '12px 15px', textAlign: 'center' }}>100.00%</td>
+                    <td style={{ padding: '12px 15px', textAlign: 'center' }}>{((inspection.pre_trip_score.total_score * 100) / TOTAL_PRECHECKLIST_QUESTIONS).toFixed(2)}%</td>
+                    <td style={{ padding: '12px 15px', textAlign: 'center' }}>
+                      <span style={{
+                        display: 'inline-block',
+                        padding: '3px 10px',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        ...(() => {
+                          const style = getSectionRiskStyle(inspection.pre_trip_score.risk_status);
+                          return { backgroundColor: style.bg, color: style.text };
+                        })(),
+                      }}>
+                        {getSectionRiskStyle(inspection.pre_trip_score.risk_status).label}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
             
             {/* Section Scores Grid */}

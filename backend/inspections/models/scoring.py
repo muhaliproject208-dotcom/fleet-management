@@ -15,25 +15,27 @@ from .health_fitness import HEALTH_FITNESS_SCORES
 SCORE_PER_QUESTION = Decimal('1')
 
 # Total questions across all 8 pre-checklist forms
-# Health & Fitness: 7, Documentation: 17, Exterior: 7, Engine: 6,
+# Health & Fitness: 7, Documentation: 16, Exterior: 7, Engine: 6,
 # Interior: 6, Functional: 4, Safety Equipment: 8, Brakes & Steering: 9
-TOTAL_PRECHECKLIST_QUESTIONS = 64
+TOTAL_PRECHECKLIST_QUESTIONS = 63
 
 # Section question counts (for calculating section weight)
+# Formula for section percentage: (questions * 100) / TOTAL_PRECHECKLIST_QUESTIONS
 SECTION_QUESTIONS = {
-    'health_fitness': 7,
-    'documentation': 17,
-    'vehicle_exterior': 7,
-    'engine_fluid': 6,
-    'interior_cabin': 6,
-    'functional': 4,
-    'safety_equipment': 8,
-    'brakes_steering': 9,
+    'health_fitness': 7,        # 7 * 100 / 63 = 11.11%
+    'documentation': 16,        # 16 * 100 / 63 = 25.40%
+    'vehicle_exterior': 7,      # 7 * 100 / 63 = 11.11%
+    'engine_fluid': 6,          # 6 * 100 / 63 = 9.52%
+    'interior_cabin': 6,        # 6 * 100 / 63 = 9.52%
+    'functional': 4,            # 4 * 100 / 63 = 6.35%
+    'safety_equipment': 8,      # 8 * 100 / 63 = 12.70%
+    'brakes_steering': 9,       # 9 * 100 / 63 = 14.29%
 }
 
-# Section weights as percentage of total (calculated from question counts)
+# Section weights as percentage of total
+# Formula: (questions * 100) / total_questions
 SECTION_WEIGHTS = {
-    key: round((count / TOTAL_PRECHECKLIST_QUESTIONS) * 100, 2)
+    key: round((count * 100) / TOTAL_PRECHECKLIST_QUESTIONS, 2)
     for key, count in SECTION_QUESTIONS.items()
 }
 
@@ -492,56 +494,48 @@ class PreTripScoreSummary(models.Model):
     def calculate_health_fitness_score_new(self):
         """
         Calculate health & fitness section score using 1 point per question.
+        Total: 7 questions
+        Formula: section_percentage = (earned * 100) / TOTAL_PRECHECKLIST_QUESTIONS
         Returns tuple of (earned_score, max_score, num_questions, percentage_of_total)
         """
         try:
             health_check = self.inspection.health_fitness
-            # Count questions answered
-            questions = 0
+            # Always 7 questions in health & fitness section
+            questions = 7
             passed = 0
             
-            # Adequate Rest
-            if health_check.adequate_rest is not None:
-                questions += 1
-                if health_check.adequate_rest:
-                    passed += 1
+            # 1. Adequate Rest
+            if health_check.adequate_rest is True:
+                passed += 1
             
-            # Alcohol Test
-            if health_check.alcohol_test_status:
-                questions += 1
-                if health_check.alcohol_test_status == 'pass':
-                    passed += 1
+            # 2. Alcohol Test
+            if health_check.alcohol_test_status == 'pass':
+                passed += 1
             
-            # Temperature Check
-            if health_check.temperature_check_status:
-                questions += 1
-                if health_check.temperature_check_status == 'pass':
-                    passed += 1
+            # 3. Temperature Check
+            if health_check.temperature_check_status == 'pass':
+                passed += 1
             
-            # Fit for Duty
-            questions += 1
+            # 4. Fit for Duty
             if health_check.fit_for_duty:
                 passed += 1
             
-            # No Health Impairment
-            questions += 1
+            # 5. No Health Impairment
             if health_check.no_health_impairment:
                 passed += 1
             
-            # Fatigue Checklist
-            questions += 1
+            # 6. Fatigue Checklist Completed
             if health_check.fatigue_checklist_completed:
                 passed += 1
             
-            # Medication Status (informational, still a question)
-            questions += 1
-            if not health_check.medication_status:  # No medication is positive
+            # 7. Medication Status (No medication is positive)
+            if not health_check.medication_status:
                 passed += 1
             
             earned = Decimal(passed) * SCORE_PER_QUESTION
             max_score = Decimal(questions) * SCORE_PER_QUESTION
-            # Calculate percentage of total prechecklist (out of 100%)
-            percentage_of_total = round((float(earned) / TOTAL_PRECHECKLIST_QUESTIONS) * 100, 2)
+            # Calculate percentage of total prechecklist: (earned * 100) / 63
+            percentage_of_total = round((float(earned) * 100) / TOTAL_PRECHECKLIST_QUESTIONS, 2)
             
             return earned, max_score, questions, percentage_of_total
         except Exception:
@@ -550,6 +544,8 @@ class PreTripScoreSummary(models.Model):
     def calculate_documentation_score_new(self):
         """
         Calculate documentation section score using 1 point per question.
+        Total: 16 questions (excluding legacy fields)
+        Formula: section_percentage = (earned * 100) / TOTAL_PRECHECKLIST_QUESTIONS
         Returns tuple of (earned_score, max_score, num_questions, percentage_of_total)
         """
         try:
@@ -557,96 +553,96 @@ class PreTripScoreSummary(models.Model):
             questions = 0
             passed = 0
             
-            # Certificate of Fitness Valid
+            # 1. Certificate of Fitness Valid (uses new field, legacy as fallback)
             questions += 1
             if doc.certificate_of_fitness_valid == 'yes' or doc.certificate_of_fitness == 'valid':
                 passed += 1
             
-            # Road Tax Valid
+            # 2. Road Tax Valid
             questions += 1
             if doc.road_tax_valid:
                 passed += 1
             
-            # Insurance Valid
+            # 3. Insurance Valid
             questions += 1
             if doc.insurance_valid:
                 passed += 1
             
-            # Trip Authorization Signed
+            # 4. Trip Authorization Signed
             questions += 1
             if doc.trip_authorization_signed:
                 passed += 1
             
-            # Logbook Present
+            # 5. Logbook Present
             questions += 1
             if doc.logbook_present:
                 passed += 1
             
-            # Driver Handbook Present
+            # 6. Driver Handbook Present
             questions += 1
             if doc.driver_handbook_present:
                 passed += 1
             
-            # Permits Valid
+            # 7. Permits Valid
             questions += 1
             if doc.permits_valid:
                 passed += 1
             
-            # PPE Available
+            # 8. PPE Available
             questions += 1
             if doc.ppe_available:
                 passed += 1
             
-            # Route Familiarity
+            # 9. Route Familiarity
             questions += 1
             if doc.route_familiarity:
                 passed += 1
             
-            # Emergency Procedures Known
+            # 10. Emergency Procedures Known
             questions += 1
             if doc.emergency_procedures_known:
                 passed += 1
             
-            # GPS Activated
+            # 11. GPS Activated
             questions += 1
             if doc.gps_activated:
                 passed += 1
             
-            # Safety Briefing Provided
+            # 12. Safety Briefing Provided
             questions += 1
             safety_ok = doc.safety_briefing_provided == 'yes' if isinstance(doc.safety_briefing_provided, str) else doc.safety_briefing_provided
             if safety_ok:
                 passed += 1
             
-            # RTSA Clearance
+            # 13. RTSA Clearance
             questions += 1
             rtsa_ok = doc.rtsa_clearance == 'yes' if isinstance(doc.rtsa_clearance, str) else doc.rtsa_clearance
             if rtsa_ok:
                 passed += 1
             
-            # Time Briefing Conducted
+            # 14. Time Briefing Conducted
             questions += 1
             if doc.time_briefing_conducted:
                 passed += 1
             
-            # Emergency Contact Employer
+            # 15. Emergency Contact Employer
             questions += 1
             if doc.emergency_contact_employer:
                 passed += 1
             
-            # Emergency Contact Government
+            # 16. Emergency Contact Government
             questions += 1
             if doc.emergency_contact_government:
                 passed += 1
             
             earned = Decimal(passed) * SCORE_PER_QUESTION
             max_score = Decimal(questions) * SCORE_PER_QUESTION
-            # Calculate percentage of total prechecklist (out of 100%)
-            percentage_of_total = round((float(earned) / TOTAL_PRECHECKLIST_QUESTIONS) * 100, 2)
+            # Calculate percentage of total prechecklist: (earned * 100) / 63
+            percentage_of_total = round((float(earned) * 100) / TOTAL_PRECHECKLIST_QUESTIONS, 2)
             
             return earned, max_score, questions, percentage_of_total
         except Exception:
-            return Decimal('0'), Decimal('17'), 17, 0.0  # 17 questions * 1 point
+            return Decimal('0'), Decimal('16'), 16, 0.0  # 16 questions * 1 point
     
     def calculate_vehicle_check_score_new(self, check_type):
         """
@@ -671,8 +667,8 @@ class PreTripScoreSummary(models.Model):
             
             earned = Decimal(passed) * SCORE_PER_QUESTION
             max_score = Decimal(questions) * SCORE_PER_QUESTION if questions > 0 else Decimal('0')
-            # Calculate percentage of total prechecklist (out of 100%)
-            percentage_of_total = round((float(earned) / TOTAL_PRECHECKLIST_QUESTIONS) * 100, 2) if TOTAL_PRECHECKLIST_QUESTIONS > 0 else 0.0
+            # Calculate percentage of total prechecklist: (earned * 100) / 63
+            percentage_of_total = round((float(earned) * 100) / TOTAL_PRECHECKLIST_QUESTIONS, 2) if TOTAL_PRECHECKLIST_QUESTIONS > 0 else 0.0
             
             return earned, max_score, questions, percentage_of_total
         except Exception:

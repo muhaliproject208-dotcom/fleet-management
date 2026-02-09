@@ -12,6 +12,15 @@ import type { VehicleCheck } from '@/lib/api/inspections/types';
 import ProgressTracker from '../components/ProgressTracker';
 import { RadioOption, CheckItem } from '../components/FormComponents';
 import { getFriendlyErrorMessage } from '@/lib/utils/errorMessages';
+import {
+  TOTAL_PRECHECKLIST_QUESTIONS,
+  SECTION_QUESTIONS,
+  SECTION_WEIGHTS,
+  SECTION_NAMES,
+  calculateLiveScore,
+  type SectionKey,
+  type LiveScoreResult,
+} from '@/lib/utils/scoring';
 
 // Mapping from display labels to backend-valid enum keys
 const EXTERIOR_CHECK_MAP: Record<string, string> = {
@@ -290,15 +299,11 @@ export default function NewInspectionWizard() {
     ready_remarks: '',
   });
 
-  // Calculate real-time score for current step
-  // Total questions across all pre-checklist forms = 64
-  const TOTAL_PRECHECKLIST_QUESTIONS = 64;
-  const calculateStepScore = () => {
-    const POINTS_PER_QUESTION = 1;
-    
+  // Calculate real-time score for current step using the scoring utility
+  const calculateStepScore = (): LiveScoreResult | null => {
     switch (currentStep) {
       case 2: {
-        // Health & Fitness - track answered vs passed
+        // Health & Fitness - 7 questions
         const healthAnswers = [
           { answered: formData.adequate_rest !== null, passed: formData.adequate_rest === true },
           { answered: formData.alcohol_test_status !== '', passed: formData.alcohol_test_status === 'pass' },
@@ -310,20 +315,14 @@ export default function NewInspectionWizard() {
         ];
         const answered = healthAnswers.filter(q => q.answered).length;
         const passed = healthAnswers.filter(q => q.answered && q.passed).length;
-        return {
-          earned: passed * POINTS_PER_QUESTION,
-          possible: 7 * POINTS_PER_QUESTION,
-          answered,
-          total: 7,
-          percentage: answered > 0 ? Math.round((passed / answered) * 100) : 0,
-        };
+        return calculateLiveScore('health_fitness', passed, answered);
       }
       
       case 3: {
-        // Documentation & Compliance
+        // Documentation & Compliance - 16 questions
         const docAnswers = [
-          { answered: formData.certificate_of_fitness !== '', passed: formData.certificate_of_fitness === 'valid' },
-          { answered: formData.certificate_of_fitness_valid !== '', passed: formData.certificate_of_fitness_valid === 'yes' },
+          { answered: formData.certificate_of_fitness_valid !== '' || formData.certificate_of_fitness !== '', 
+            passed: formData.certificate_of_fitness_valid === 'yes' || formData.certificate_of_fitness === 'valid' },
           { answered: formData.road_tax_valid !== null, passed: formData.road_tax_valid === true },
           { answered: formData.insurance_valid !== null, passed: formData.insurance_valid === true },
           { answered: formData.trip_authorization_signed !== null, passed: formData.trip_authorization_signed === true },
@@ -336,99 +335,61 @@ export default function NewInspectionWizard() {
           { answered: formData.gps_activated !== null, passed: formData.gps_activated === true },
           { answered: formData.safety_briefing_provided !== '', passed: formData.safety_briefing_provided === 'yes' },
           { answered: formData.rtsa_clearance !== '', passed: formData.rtsa_clearance === 'yes' },
-          { answered: formData.emergency_contact?.trim().length > 0, passed: formData.emergency_contact?.trim().length > 0 },
+          { answered: formData.time_briefing_conducted?.trim().length > 0, passed: formData.time_briefing_conducted?.trim().length > 0 },
+          { answered: formData.emergency_contact_employer?.trim().length > 0, passed: formData.emergency_contact_employer?.trim().length > 0 },
+          { answered: formData.emergency_contact_government?.trim().length > 0, passed: formData.emergency_contact_government?.trim().length > 0 },
         ];
         const answered = docAnswers.filter(q => q.answered).length;
         const passed = docAnswers.filter(q => q.answered && q.passed).length;
-        return {
-          earned: passed * POINTS_PER_QUESTION,
-          possible: 15 * POINTS_PER_QUESTION,
-          answered,
-          total: 15,
-          percentage: answered > 0 ? Math.round((passed / answered) * 100) : 0,
-        };
+        return calculateLiveScore('documentation', passed, answered);
       }
       
       case 4: {
-        // Exterior Checks
+        // Exterior Checks - 7 questions
         const checks = formData.exterior_checks;
         const answered = checks.filter(c => c.status !== null).length;
         const passed = checks.filter(c => c.status === 'pass').length;
-        return {
-          earned: passed * POINTS_PER_QUESTION,
-          possible: checks.length * POINTS_PER_QUESTION,
-          answered,
-          total: checks.length,
-          percentage: answered > 0 ? Math.round((passed / answered) * 100) : 0,
-        };
+        return calculateLiveScore('vehicle_exterior', passed, answered);
       }
       
       case 5: {
-        // Engine Checks
+        // Engine Checks - 6 questions
         const checks = formData.engine_checks;
         const answered = checks.filter(c => c.status !== null).length;
         const passed = checks.filter(c => c.status === 'pass').length;
-        return {
-          earned: passed * POINTS_PER_QUESTION,
-          possible: checks.length * POINTS_PER_QUESTION,
-          answered,
-          total: checks.length,
-          percentage: answered > 0 ? Math.round((passed / answered) * 100) : 0,
-        };
+        return calculateLiveScore('engine_fluid', passed, answered);
       }
       
       case 6: {
-        // Interior Checks
+        // Interior Checks - 6 questions
         const checks = formData.interior_checks;
         const answered = checks.filter(c => c.status !== null).length;
         const passed = checks.filter(c => c.status === 'pass').length;
-        return {
-          earned: passed * POINTS_PER_QUESTION,
-          possible: checks.length * POINTS_PER_QUESTION,
-          answered,
-          total: checks.length,
-          percentage: answered > 0 ? Math.round((passed / answered) * 100) : 0,
-        };
+        return calculateLiveScore('interior_cabin', passed, answered);
       }
       
       case 7: {
-        // Functional Checks
+        // Functional Checks - 4 questions
         const checks = formData.functional_checks;
         const answered = checks.filter(c => c.status !== null).length;
         const passed = checks.filter(c => c.status === 'pass').length;
-        return {
-          earned: passed * POINTS_PER_QUESTION,
-          possible: checks.length * POINTS_PER_QUESTION,
-          answered,
-          total: checks.length,
-          percentage: answered > 0 ? Math.round((passed / answered) * 100) : 0,
-        };
+        return calculateLiveScore('functional', passed, answered);
       }
       
       case 8: {
-        // Safety Checks
+        // Safety Checks - 8 questions
         const checks = formData.safety_checks;
         const answered = checks.filter(c => c.status !== null).length;
         const passed = checks.filter(c => c.status === 'pass').length;
-        return {
-          earned: passed * POINTS_PER_QUESTION,
-          possible: checks.length * POINTS_PER_QUESTION,
-          answered,
-          total: checks.length,
-          percentage: answered > 0 ? Math.round((passed / answered) * 100) : 0,
-        };
+        return calculateLiveScore('safety_equipment', passed, answered);
       }
       
       case 9: {
-        // Brakes & Steering Checks
+        // Brakes & Steering Checks - 9 questions
         const checks = formData.brakes_steering_checks;
         const answered = checks.filter(c => c.status !== null).length;
         const passed = checks.filter(c => c.status === 'pass').length;
-        return {
-          earned: passed * POINTS_PER_QUESTION,
-          possible: checks.length * POINTS_PER_QUESTION,
-          answered,
-          total: checks.length,
+        return calculateLiveScore('brakes_steering', passed, answered);
           percentage: answered > 0 ? Math.round((passed / answered) * 100) : 0,
         };
       }
@@ -438,27 +399,10 @@ export default function NewInspectionWizard() {
     }
   };
   
-  // Get risk status based on percentage - new thresholds
-  const getRiskStatus = (percentage: number): { status: string; color: string; bgColor: string } => {
-    if (percentage >= 100) {
-      return { status: 'NO RISK', color: '#166534', bgColor: '#e8f5e9' };
-    } else if (percentage >= 85) {
-      return { status: 'VERY LOW RISK', color: '#1565c0', bgColor: '#e3f2fd' };
-    } else if (percentage >= 70) {
-      return { status: 'LOW RISK', color: '#ef6c00', bgColor: '#fff3e0' };
-    } else {
-      return { status: 'HIGH RISK', color: '#c62828', bgColor: '#ffebee' };
-    }
-  };
-  
-  // Render score display component
+  // Render score display component with weights
   const renderScoreDisplay = () => {
     const score = calculateStepScore();
     if (!score) return null;
-    
-    const risk = getRiskStatus(score.percentage);
-    // Calculate this section's contribution to the total prechecklist score
-    const totalPercentage = ((score.earned / TOTAL_PRECHECKLIST_QUESTIONS) * 100).toFixed(2);
     
     return (
       <div style={{
@@ -468,13 +412,15 @@ export default function NewInspectionWizard() {
         borderRadius: '8px',
         border: '1px solid #e2e8f0',
       }}>
+        {/* Main score row */}
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
-          alignItems: 'center',
+          alignItems: 'flex-start',
           flexWrap: 'wrap',
           gap: '15px'
         }}>
+          {/* Section Score */}
           <div>
             <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '500' }}>
               SECTION SCORE
@@ -487,11 +433,27 @@ export default function NewInspectionWizard() {
                 {' / '}{score.possible} pts
               </span>
             </div>
-            <div style={{ marginTop: '2px', fontSize: '12px', color: '#64748b' }}>
-              {totalPercentage}% of total checklist
+          </div>
+          
+          {/* Weight Contribution */}
+          <div style={{ textAlign: 'center' }}>
+            <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '500' }}>
+              WEIGHT CONTRIBUTION
+            </span>
+            <div style={{ marginTop: '4px' }}>
+              <span style={{ fontSize: '20px', fontWeight: '700', color: '#1976d2' }}>
+                {score.earnedWeight.toFixed(2)}%
+              </span>
+              <span style={{ fontSize: '14px', color: '#64748b' }}>
+                {' / '}{score.maxWeight.toFixed(2)}%
+              </span>
+            </div>
+            <div style={{ marginTop: '2px', fontSize: '11px', color: '#94a3b8' }}>
+              of total {TOTAL_PRECHECKLIST_QUESTIONS} questions
             </div>
           </div>
           
+          {/* Progress */}
           <div style={{ textAlign: 'center' }}>
             <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '500' }}>
               PROGRESS
@@ -504,6 +466,7 @@ export default function NewInspectionWizard() {
             </div>
           </div>
           
+          {/* Risk Status */}
           <div style={{ textAlign: 'right' }}>
             <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '500' }}>
               RISK STATUS
@@ -511,20 +474,20 @@ export default function NewInspectionWizard() {
             <div style={{ 
               marginTop: '4px',
               padding: '6px 12px',
-              backgroundColor: risk.bgColor,
+              backgroundColor: score.riskStyle.bg,
               borderRadius: '6px',
               display: 'inline-block'
             }}>
               <span style={{ 
                 fontSize: '14px', 
                 fontWeight: '700', 
-                color: risk.color 
+                color: score.riskStyle.text 
               }}>
-                {score.answered > 0 ? risk.status : 'NOT EVALUATED'}
+                {score.answered > 0 ? score.riskDisplay.toUpperCase() : 'NOT EVALUATED'}
               </span>
               {score.answered > 0 && (
-                <span style={{ fontSize: '13px', color: risk.color, marginLeft: '8px' }}>
-                  ({score.percentage}%)
+                <span style={{ fontSize: '13px', color: score.riskStyle.text, marginLeft: '8px' }}>
+                  ({score.sectionPercentage.toFixed(0)}%)
                 </span>
               )}
             </div>
@@ -542,11 +505,25 @@ export default function NewInspectionWizard() {
             <div style={{
               height: '100%',
               width: `${(score.answered / score.total) * 100}%`,
-              backgroundColor: score.percentage >= 100 ? '#4caf50' : score.percentage >= 85 ? '#2196f3' : score.percentage >= 70 ? '#ff9800' : '#f44336',
+              backgroundColor: score.riskStyle.text,
               borderRadius: '4px',
               transition: 'width 0.3s ease'
             }} />
           </div>
+        </div>
+        
+        {/* Formula explanation */}
+        <div style={{ 
+          marginTop: '10px', 
+          fontSize: '11px', 
+          color: '#94a3b8',
+          display: 'flex',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px'
+        }}>
+          <span>Formula: Weight % = (questions × 100) ÷ {TOTAL_PRECHECKLIST_QUESTIONS}</span>
+          <span>Max Weight: {score.possible} × 100 ÷ {TOTAL_PRECHECKLIST_QUESTIONS} = {score.maxWeight.toFixed(2)}%</span>
         </div>
       </div>
     );

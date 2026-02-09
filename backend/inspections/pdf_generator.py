@@ -840,34 +840,54 @@ class InspectionPDFGenerator:
         self.story.append(overall_table)
         self.story.append(Spacer(1, 0.15*inch))
         
-        # Section Breakdown with Subtotals and Risk Levels
+        # Section Breakdown with Subtotals, Max Weight and Risk Levels
+        # Formula: Section % = (earned * 100) / 63, Max % = (questions * 100) / 63
         section_summary = score_summary.get_section_summary()
-        breakdown_data = [['Section', 'Questions', 'Subtotal', 'Percentage', 'Risk Level']]
+        breakdown_data = [['Section', 'Questions', 'Subtotal', 'Max %', 'Earned %', 'Risk Level']]
         for section in section_summary:
-            pct = section['percentage']
+            pct = section['percentage']  # Section-specific percentage (earned/max * 100)
             subtotal = section.get('subtotal', f"{section['score']}/{section['max']}")
             questions = section.get('questions', '-')
             risk_display = section.get('risk_display', 'N/A')
+            max_weight = section.get('max_weight', 0)  # Max % this section contributes
+            earned_pct = section.get('total_percentage', 0)  # Earned % of total (earned * 100 / 63)
             breakdown_data.append([
                 section['section'],
                 str(questions),
                 subtotal,
-                f"{pct}%",
+                f"{max_weight:.2f}%",
+                f"{earned_pct:.2f}%",
                 risk_display
             ])
         
-        breakdown_table = Table(breakdown_data, colWidths=[2.0*inch, 0.8*inch, 1.2*inch, 1.0*inch, 1.5*inch])
+        # Add totals row
+        total_max_weight = sum(s.get('max_weight', 0) for s in section_summary)
+        total_earned_pct = sum(s.get('total_percentage', 0) for s in section_summary)
+        breakdown_data.append([
+            'Overall Score',
+            str(score_summary.total_questions),
+            f"{int(score_summary.total_score)}/{int(score_summary.max_possible_score)}",
+            f"100%",
+            f"{total_earned_pct:.2f}%",
+            score_summary.get_risk_status_display()
+        ])
+        
+        breakdown_table = Table(breakdown_data, colWidths=[1.8*inch, 0.7*inch, 1.0*inch, 0.8*inch, 0.9*inch, 1.3*inch])
         breakdown_style = TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c5aa0')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('ALIGN', (1, 0), (4, -1), 'CENTER'),
+            ('ALIGN', (1, 0), (5, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 9),
             ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+            # Style the totals row
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#e8e8e8')),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
         ])
         
-        # Color code percentage and risk columns using new thresholds
+        # Color code Earned % and Risk columns using thresholds
+        # Column indices: 0=Section, 1=Questions, 2=Subtotal, 3=Max%, 4=Earned%, 5=Risk
         risk_colors = {
             'No Risk': colors.HexColor('#e8f5e9'),
             'Very Low Risk': colors.HexColor('#E3F2FD'),
@@ -875,21 +895,21 @@ class InspectionPDFGenerator:
             'High Risk': colors.HexColor('#FFEBEE'),
         }
         for i, section in enumerate(section_summary, 1):
-            pct = section['percentage']
-            # Color code percentage column
+            pct = section['percentage']  # Section completion % (earned/max * 100)
+            # Color code Earned % column (column 4)
             if pct >= 100:
-                breakdown_style.add('BACKGROUND', (3, i), (3, i), colors.HexColor('#e8f5e9'))
+                breakdown_style.add('BACKGROUND', (4, i), (4, i), colors.HexColor('#e8f5e9'))
             elif pct >= 85:
-                breakdown_style.add('BACKGROUND', (3, i), (3, i), colors.HexColor('#E3F2FD'))
+                breakdown_style.add('BACKGROUND', (4, i), (4, i), colors.HexColor('#E3F2FD'))
             elif pct >= 70:
-                breakdown_style.add('BACKGROUND', (3, i), (3, i), colors.HexColor('#FFF3E0'))
+                breakdown_style.add('BACKGROUND', (4, i), (4, i), colors.HexColor('#FFF3E0'))
             else:
-                breakdown_style.add('BACKGROUND', (3, i), (3, i), colors.HexColor('#FFEBEE'))
+                breakdown_style.add('BACKGROUND', (4, i), (4, i), colors.HexColor('#FFEBEE'))
             
-            # Color code risk column
+            # Color code Risk column (column 5)
             risk_display = section.get('risk_display', 'N/A')
             risk_bg = risk_colors.get(risk_display, colors.HexColor('#f5f5f5'))
-            breakdown_style.add('BACKGROUND', (4, i), (4, i), risk_bg)
+            breakdown_style.add('BACKGROUND', (5, i), (5, i), risk_bg)
         
         breakdown_table.setStyle(breakdown_style)
         self.story.append(breakdown_table)
