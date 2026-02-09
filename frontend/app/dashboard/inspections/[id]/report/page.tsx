@@ -463,18 +463,19 @@ export default function InspectionReportPage() {
                     <th style={{ padding: '12px 15px', textAlign: 'center', fontWeight: '600' }}>Max %</th>
                     <th style={{ padding: '12px 15px', textAlign: 'center', fontWeight: '600' }}>Earned %</th>
                     <th style={{ padding: '12px 15px', textAlign: 'center', fontWeight: '600' }}>Risk Level</th>
+                    <th style={{ padding: '12px 15px', textAlign: 'center', fontWeight: '600' }}>PDF</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    { key: 'health_fitness', label: 'Health & Fitness', score: inspection.pre_trip_score.health_fitness_score, max: inspection.pre_trip_score.health_fitness_max, risk: inspection.pre_trip_score.health_fitness_risk },
-                    { key: 'documentation', label: 'Documentation', score: inspection.pre_trip_score.documentation_score, max: inspection.pre_trip_score.documentation_max, risk: inspection.pre_trip_score.documentation_risk },
-                    { key: 'vehicle_exterior', label: 'Vehicle Exterior', score: inspection.pre_trip_score.vehicle_exterior_score, max: inspection.pre_trip_score.vehicle_exterior_max, risk: inspection.pre_trip_score.vehicle_exterior_risk },
-                    { key: 'engine_fluid', label: 'Engine & Fluid', score: inspection.pre_trip_score.engine_fluid_score, max: inspection.pre_trip_score.engine_fluid_max, risk: inspection.pre_trip_score.engine_fluid_risk },
-                    { key: 'interior_cabin', label: 'Interior & Cabin', score: inspection.pre_trip_score.interior_cabin_score, max: inspection.pre_trip_score.interior_cabin_max, risk: inspection.pre_trip_score.interior_cabin_risk },
-                    { key: 'functional', label: 'Functional Checks', score: inspection.pre_trip_score.functional_score, max: inspection.pre_trip_score.functional_max, risk: inspection.pre_trip_score.functional_risk },
-                    { key: 'safety_equipment', label: 'Safety Equipment', score: inspection.pre_trip_score.safety_equipment_score, max: inspection.pre_trip_score.safety_equipment_max, risk: inspection.pre_trip_score.safety_equipment_risk },
-                    { key: 'brakes_steering', label: 'Brakes & Steering', score: inspection.pre_trip_score.brakes_steering_score, max: inspection.pre_trip_score.brakes_steering_max, risk: inspection.pre_trip_score.brakes_steering_risk },
+                    { key: 'health_fitness', apiKey: 'health_fitness', label: 'Health & Fitness', score: inspection.pre_trip_score.health_fitness_score, max: inspection.pre_trip_score.health_fitness_max, risk: inspection.pre_trip_score.health_fitness_risk },
+                    { key: 'documentation', apiKey: 'documentation', label: 'Documentation', score: inspection.pre_trip_score.documentation_score, max: inspection.pre_trip_score.documentation_max, risk: inspection.pre_trip_score.documentation_risk },
+                    { key: 'vehicle_exterior', apiKey: 'exterior', label: 'Vehicle Exterior', score: inspection.pre_trip_score.vehicle_exterior_score, max: inspection.pre_trip_score.vehicle_exterior_max, risk: inspection.pre_trip_score.vehicle_exterior_risk },
+                    { key: 'engine_fluid', apiKey: 'engine', label: 'Engine & Fluid', score: inspection.pre_trip_score.engine_fluid_score, max: inspection.pre_trip_score.engine_fluid_max, risk: inspection.pre_trip_score.engine_fluid_risk },
+                    { key: 'interior_cabin', apiKey: 'interior', label: 'Interior & Cabin', score: inspection.pre_trip_score.interior_cabin_score, max: inspection.pre_trip_score.interior_cabin_max, risk: inspection.pre_trip_score.interior_cabin_risk },
+                    { key: 'functional', apiKey: 'functional', label: 'Functional Checks', score: inspection.pre_trip_score.functional_score, max: inspection.pre_trip_score.functional_max, risk: inspection.pre_trip_score.functional_risk },
+                    { key: 'safety_equipment', apiKey: 'safety', label: 'Safety Equipment', score: inspection.pre_trip_score.safety_equipment_score, max: inspection.pre_trip_score.safety_equipment_max, risk: inspection.pre_trip_score.safety_equipment_risk },
+                    { key: 'brakes_steering', apiKey: 'brakes_steering', label: 'Brakes & Steering', score: inspection.pre_trip_score.brakes_steering_score, max: inspection.pre_trip_score.brakes_steering_max, risk: inspection.pre_trip_score.brakes_steering_risk },
                   ].map((section, idx) => {
                     const questions = SECTION_QUESTIONS[section.key as keyof typeof SECTION_QUESTIONS] || 0;
                     const maxWeight = SECTION_WEIGHTS[section.key as keyof typeof SECTION_WEIGHTS] || 0;
@@ -499,6 +500,27 @@ export default function InspectionReportPage() {
                           }}>
                             {riskStyle.label}
                           </span>
+                        </td>
+                        <td style={{ padding: '10px 15px', textAlign: 'center' }}>
+                          <button
+                            onClick={() => downloadSectionPDF(section.apiKey)}
+                            disabled={downloadingSection === section.apiKey}
+                            style={{
+                              padding: '4px 8px',
+                              backgroundColor: downloadingSection === section.apiKey ? '#ccc' : '#000',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              cursor: downloadingSection === section.apiKey ? 'not-allowed' : 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            <span className="material-icons" style={{ fontSize: '14px' }}>download</span>
+                            {downloadingSection === section.apiKey ? '...' : 'PDF'}
+                          </button>
                         </td>
                       </tr>
                     );
@@ -525,6 +547,7 @@ export default function InspectionReportPage() {
                         {getSectionRiskStyle(inspection.pre_trip_score.risk_status).label}
                       </span>
                     </td>
+                    <td style={{ padding: '12px 15px', textAlign: 'center' }}></td>
                   </tr>
                 </tbody>
               </table>

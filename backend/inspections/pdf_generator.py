@@ -1301,7 +1301,9 @@ class InspectionPDFGenerator:
         self.story.append(Spacer(1, 0.3*inch))
     
     def _generate_section_score_summary(self, inspection, section_name):
-        """Generate score summary for individual section"""
+        """Generate score summary for individual section with weights"""
+        from .models.scoring import TOTAL_PRECHECKLIST_QUESTIONS
+        
         try:
             score_summary, _ = PreTripScoreSummary.objects.get_or_create(inspection=inspection)
             score_summary.save()  # Recalculate scores
@@ -1326,12 +1328,17 @@ class InspectionPDFGenerator:
         score_field, max_field, questions_field = score_mapping[section_name]
         score = float(getattr(score_summary, score_field, 0))
         max_score = float(getattr(score_summary, max_field, 0))
-        questions = getattr(score_summary, questions_field, 0)
+        questions = int(getattr(score_summary, questions_field, 0))
         
+        # Calculate percentages
         if max_score > 0:
-            percentage = round((score / max_score) * 100, 1)
+            section_percentage = round((score / max_score) * 100, 1)
         else:
-            percentage = 0
+            section_percentage = 0
+        
+        # Calculate weights using formula: (questions × 100) / TOTAL_PRECHECKLIST_QUESTIONS
+        max_weight = (questions * 100) / TOTAL_PRECHECKLIST_QUESTIONS
+        earned_weight = (score * 100) / TOTAL_PRECHECKLIST_QUESTIONS
         
         self.story.append(Spacer(1, 0.2*inch))
         
@@ -1340,22 +1347,37 @@ class InspectionPDFGenerator:
         self.story.append(section_title)
         self.story.append(Spacer(1, 0.1*inch))
         
-        score_color = colors.HexColor('#e8f5e9') if percentage >= 100 else (
-            colors.HexColor('#E3F2FD') if percentage >= 85 else (
-                colors.HexColor('#FFF3E0') if percentage >= 70 else colors.HexColor('#FFEBEE')
-            )
-        )
+        # Risk indicator based on section percentage
+        if section_percentage >= 100:
+            risk_text = 'NO RISK'
+            risk_color = colors.HexColor('#e8f5e9')
+        elif section_percentage >= 85:
+            risk_text = 'VERY LOW RISK'
+            risk_color = colors.HexColor('#E3F2FD')
+        elif section_percentage >= 70:
+            risk_text = 'LOW RISK'
+            risk_color = colors.HexColor('#FFF3E0')
+        else:
+            risk_text = 'HIGH RISK'
+            risk_color = colors.HexColor('#FFEBEE')
         
+        # Table with Scores, Weights, Risk Level
         score_data = [
-            ['Questions', 'Score Per Question', 'Section Score', 'Percentage'],
-            [str(questions), '1 point', f'{score:.1f} / {max_score:.1f}', f'{percentage}%']
+            ['Questions', 'Subtotal', 'Max %', 'Earned %', 'Risk Level'],
+            [
+                str(questions), 
+                f'{int(score)} / {int(max_score)}', 
+                f'{max_weight:.2f}%', 
+                f'{earned_weight:.2f}%', 
+                risk_text
+            ]
         ]
         
-        score_table = Table(score_data, colWidths=[1.5*inch, 1.5*inch, 2*inch, 1.5*inch])
+        score_table = Table(score_data, colWidths=[1.2*inch, 1.3*inch, 1.2*inch, 1.2*inch, 1.6*inch])
         score_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c5aa0')),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#000000')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('BACKGROUND', (3, 1), (3, 1), score_color),
+            ('BACKGROUND', (4, 1), (4, 1), risk_color),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 10),
@@ -1365,36 +1387,6 @@ class InspectionPDFGenerator:
         ]))
         
         self.story.append(score_table)
-        
-        # Risk indicator based on section percentage - updated thresholds
-        if percentage >= 100:
-            risk_text = 'NO RISK'
-            risk_color = colors.HexColor('#e8f5e9')
-        elif percentage >= 85:
-            risk_text = 'VERY LOW RISK'
-            risk_color = colors.HexColor('#E3F2FD')
-        elif percentage >= 70:
-            risk_text = 'LOW RISK'
-            risk_color = colors.HexColor('#FFF3E0')
-        else:
-            risk_text = 'HIGH RISK'
-            risk_color = colors.HexColor('#FFEBEE')
-        
-        self.story.append(Spacer(1, 0.1*inch))
-        
-        risk_data = [[f'Section Risk Status: {risk_text}']]
-        risk_table = Table(risk_data, colWidths=[6.5*inch])
-        risk_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), risk_color),
-            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 11),
-            ('TOPPADDING', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-        ]))
-        
-        self.story.append(risk_table)
     
     def generate_full_report(self, inspection_id):
         """Generate complete PDF report for an inspection"""
