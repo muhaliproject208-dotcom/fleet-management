@@ -1485,8 +1485,16 @@ export default function NewInspectionWizard() {
   };
 
   // Render section header with optional PDF download button (only shows if section is saved)
-  const renderSectionHeader = (showDownload: boolean = false) => {
-    // Map current step to saved section key
+  const renderSectionHeader = () => {
+    return (
+      <div style={{ marginBottom: '20px' }}>
+        <h2 style={{ color: '#000', margin: 0 }}>{getFormTitle()}</h2>
+      </div>
+    );
+  };
+
+  // Helper to check if current section can download PDF
+  const canDownloadCurrentSection = () => {
     const sectionKeyMap: Record<number, keyof typeof savedSections> = {
       2: 'health',
       3: 'documentation',
@@ -1497,54 +1505,8 @@ export default function NewInspectionWizard() {
       8: 'safety',
       9: 'brakes_steering',
     };
-    
     const sectionKey = sectionKeyMap[currentStep];
-    const isSectionSaved = sectionKey ? savedSections[sectionKey] : false;
-    const canDownload = inspectionId && isSectionSaved;
-    
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: '20px' 
-      }}>
-        <h2 style={{ color: '#000', margin: 0 }}>{getFormTitle()}</h2>
-        {showDownload && currentStep >= 2 && currentStep <= 9 && (
-          <button
-            onClick={() => {
-              if (!inspectionId) {
-                setError('Please save this section first by clicking "Next" before downloading the PDF.');
-                return;
-              }
-              if (!isSectionSaved) {
-                setError('Please save this section first by clicking "Next" before downloading the PDF.');
-                return;
-              }
-              downloadSectionPdf(currentStep);
-            }}
-            disabled={loading}
-            style={{ 
-              padding: '8px 16px', 
-              fontSize: '13px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: canDownload ? '#000' : '#9ca3af',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              flexShrink: 0,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
-            {canDownload ? 'Download PDF' : 'Save to Download PDF'}
-          </button>
-        )}
-      </div>
-    );
+    return inspectionId && sectionKey && savedSections[sectionKey];
   };
 
   const renderForm = () => {
@@ -1666,7 +1628,7 @@ export default function NewInspectionWizard() {
       case 2:
         return (
           <div>
-            {renderSectionHeader(true)}
+            {renderSectionHeader()}
             
             {/* CRITICAL: Rest/Fatigue Clearance - Must be first and prominent */}
             <div style={{ 
@@ -1924,7 +1886,7 @@ export default function NewInspectionWizard() {
       case 3:
         return (
           <div>
-            {renderSectionHeader(true)}
+            {renderSectionHeader()}
             
             <div style={{ marginBottom: '25px' }}>
               <label style={{ display: 'block', fontWeight: '600', color: '#000', marginBottom: '10px' }}>
@@ -2089,7 +2051,7 @@ export default function NewInspectionWizard() {
       case 4:
         return (
           <div>
-            {renderSectionHeader(true)}
+            {renderSectionHeader()}
             {formData.exterior_checks.map((check, index) => (
               <CheckItem
                 key={index}
@@ -2115,7 +2077,7 @@ export default function NewInspectionWizard() {
       case 5:
         return (
           <div>
-            {renderSectionHeader(true)}
+            {renderSectionHeader()}
             {formData.engine_checks.map((check, index) => (
               <CheckItem
                 key={index}
@@ -2141,7 +2103,7 @@ export default function NewInspectionWizard() {
       case 6:
         return (
           <div>
-            {renderSectionHeader(true)}
+            {renderSectionHeader()}
             {formData.interior_checks.map((check, index) => (
               <CheckItem
                 key={index}
@@ -2167,7 +2129,7 @@ export default function NewInspectionWizard() {
       case 7:
         return (
           <div>
-            {renderSectionHeader(true)}
+            {renderSectionHeader()}
             {formData.functional_checks.map((check, index) => (
               <CheckItem
                 key={index}
@@ -2193,7 +2155,7 @@ export default function NewInspectionWizard() {
       case 8:
         return (
           <div>
-            {renderSectionHeader(true)}
+            {renderSectionHeader()}
             {formData.safety_checks.map((check, index) => (
               <CheckItem
                 key={index}
@@ -2219,7 +2181,7 @@ export default function NewInspectionWizard() {
       case 9:
         return (
           <div>
-            {renderSectionHeader(true)}
+            {renderSectionHeader()}
             <div style={{ 
               marginBottom: '20px', 
               padding: '15px', 
@@ -2438,25 +2400,57 @@ export default function NewInspectionWizard() {
             Previous
           </button>
 
-          {currentStep < TOTAL_STEPS ? (
-            <button
-              onClick={handleNext}
-              disabled={loading}
-              className="button-primary"
-              style={{ width: 'auto' }}
-            >
-              Next
-            </button>
-          ) : (
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="button-primary"
-              style={{ width: 'auto' }}
-            >
-              {loading ? 'Creating...' : 'Create Inspection'}
-            </button>
-          )}
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {currentStep >= 2 && currentStep <= 9 && (
+              <button
+                onClick={() => {
+                  if (!canDownloadCurrentSection()) {
+                    setError('Please save this section first by clicking "Next" before downloading the PDF.');
+                    return;
+                  }
+                  downloadSectionPdf(currentStep);
+                }}
+                disabled={loading}
+                style={{ 
+                  padding: '10px 20px', 
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: canDownloadCurrentSection() ? '#000' : '#9ca3af',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  flexShrink: 0,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <span className="material-icons" style={{ fontSize: '18px' }}>download</span>
+                {canDownloadCurrentSection() ? 'Download PDF' : 'Save to Download PDF'}
+              </button>
+            )}
+
+            {currentStep < TOTAL_STEPS ? (
+              <button
+                onClick={handleNext}
+                disabled={loading}
+                className="button-primary"
+                style={{ width: 'auto' }}
+              >
+                Next
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="button-primary"
+                style={{ width: 'auto' }}
+              >
+                {loading ? 'Creating...' : 'Create Inspection'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
       </>
