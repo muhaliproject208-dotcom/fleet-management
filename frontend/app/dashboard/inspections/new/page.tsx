@@ -781,6 +781,31 @@ export default function NewInspectionWizard() {
     return true;
   };
 
+  // Save current section without advancing to next step
+  const handleSave = async () => {
+    if (!validateStep(currentStep)) return;
+    
+    setLoading(true);
+    setError('');
+    
+    try {
+      await saveCurrentStepData();
+      setSuccess('Section saved successfully! You can now download the PDF or proceed to the next step.');
+      setTimeout(() => setSuccess(''), 5000);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(getFriendlyErrorMessage(errorMessage));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Advance to next step (only after section is saved)
+  const handleNextStep = () => {
+    setCurrentStep(prev => Math.min(prev + 1, TOTAL_STEPS));
+    window.scrollTo(0, 0);
+  };
+
   const handleNext = async () => {
     if (!validateStep(currentStep)) return;
     
@@ -2401,37 +2426,58 @@ export default function NewInspectionWizard() {
           </button>
 
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {/* For steps 2-9: Show Save button if not saved, Download PDF + Next if saved */}
             {currentStep >= 2 && currentStep <= 9 && (
-              <button
-                onClick={() => {
-                  if (!canDownloadCurrentSection()) {
-                    setError('Please save this section first by clicking "Next" before downloading the PDF.');
-                    return;
-                  }
-                  downloadSectionPdf(currentStep);
-                }}
-                disabled={loading}
-                style={{ 
-                  padding: '10px 20px', 
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  backgroundColor: canDownloadCurrentSection() ? '#000' : '#9ca3af',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  flexShrink: 0,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <span className="material-icons" style={{ fontSize: '18px' }}>download</span>
-                {canDownloadCurrentSection() ? 'Download PDF' : 'Save to Download PDF'}
-              </button>
+              <>
+                {canDownloadCurrentSection() ? (
+                  <>
+                    <button
+                      onClick={() => downloadSectionPdf(currentStep)}
+                      disabled={loading}
+                      style={{ 
+                        padding: '10px 20px', 
+                        fontSize: '14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        backgroundColor: '#000',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: loading ? 'not-allowed' : 'pointer',
+                        flexShrink: 0,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <span className="material-icons" style={{ fontSize: '18px' }}>download</span>
+                      Download PDF
+                    </button>
+                    {currentStep < TOTAL_STEPS && (
+                      <button
+                        onClick={handleNextStep}
+                        disabled={loading}
+                        className="button-primary"
+                        style={{ width: 'auto' }}
+                      >
+                        Next
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <button
+                    onClick={handleSave}
+                    disabled={loading}
+                    className="button-primary"
+                    style={{ width: 'auto' }}
+                  >
+                    {loading ? 'Saving...' : 'Save'}
+                  </button>
+                )}
+              </>
             )}
 
-            {currentStep < TOTAL_STEPS ? (
+            {/* Step 1: Just Next button */}
+            {currentStep === 1 && (
               <button
                 onClick={handleNext}
                 disabled={loading}
@@ -2440,7 +2486,10 @@ export default function NewInspectionWizard() {
               >
                 Next
               </button>
-            ) : (
+            )}
+
+            {/* Step 10: Create Inspection button */}
+            {currentStep === TOTAL_STEPS && (
               <button
                 onClick={handleSubmit}
                 disabled={loading}
