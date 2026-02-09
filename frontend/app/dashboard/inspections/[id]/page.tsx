@@ -617,18 +617,20 @@ export default function InspectionDetailPage() {
               onClick={() => downloadSectionPDF('health_fitness')}
               disabled={downloadingSection === 'health_fitness'}
               style={{
-                padding: '6px 12px',
+                padding: '8px 16px',
                 backgroundColor: downloadingSection === 'health_fitness' ? '#ccc' : '#000',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '4px',
                 fontSize: '12px',
+                fontWeight: '500',
                 cursor: downloadingSection === 'health_fitness' ? 'not-allowed' : 'pointer',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '6px',
-                flexShrink: 0,
-                whiteSpace: 'nowrap',
+                width: '130px',
+                minWidth: '130px',
               }}
             >
               <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
@@ -675,18 +677,20 @@ export default function InspectionDetailPage() {
               onClick={() => downloadSectionPDF('documentation')}
               disabled={downloadingSection === 'documentation'}
               style={{
-                padding: '6px 12px',
+                padding: '8px 16px',
                 backgroundColor: downloadingSection === 'documentation' ? '#ccc' : '#000',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '4px',
                 fontSize: '12px',
+                fontWeight: '500',
                 cursor: downloadingSection === 'documentation' ? 'not-allowed' : 'pointer',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '6px',
-                flexShrink: 0,
-                whiteSpace: 'nowrap',
+                width: '130px',
+                minWidth: '130px',
               }}
             >
               <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
@@ -732,18 +736,20 @@ export default function InspectionDetailPage() {
               onClick={() => downloadSectionPDF('exterior')}
               disabled={downloadingSection === 'exterior'}
               style={{
-                padding: '6px 12px',
+                padding: '8px 16px',
                 backgroundColor: downloadingSection === 'exterior' ? '#ccc' : '#000',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '4px',
                 fontSize: '12px',
+                fontWeight: '500',
                 cursor: downloadingSection === 'exterior' ? 'not-allowed' : 'pointer',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '6px',
-                flexShrink: 0,
-                whiteSpace: 'nowrap',
+                width: '130px',
+                minWidth: '130px',
               }}
             >
               <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
@@ -766,18 +772,20 @@ export default function InspectionDetailPage() {
               onClick={() => downloadSectionPDF('engine')}
               disabled={downloadingSection === 'engine'}
               style={{
-                padding: '6px 12px',
+                padding: '8px 16px',
                 backgroundColor: downloadingSection === 'engine' ? '#ccc' : '#000',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '4px',
                 fontSize: '12px',
+                fontWeight: '500',
                 cursor: downloadingSection === 'engine' ? 'not-allowed' : 'pointer',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '6px',
-                flexShrink: 0,
-                whiteSpace: 'nowrap',
+                width: '130px',
+                minWidth: '130px',
               }}
             >
               <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
@@ -800,18 +808,20 @@ export default function InspectionDetailPage() {
               onClick={() => downloadSectionPDF('interior')}
               disabled={downloadingSection === 'interior'}
               style={{
-                padding: '6px 12px',
+                padding: '8px 16px',
                 backgroundColor: downloadingSection === 'interior' ? '#ccc' : '#000',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '4px',
                 fontSize: '12px',
+                fontWeight: '500',
                 cursor: downloadingSection === 'interior' ? 'not-allowed' : 'pointer',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '6px',
-                flexShrink: 0,
-                whiteSpace: 'nowrap',
+                width: '130px',
+                minWidth: '130px',
               }}
             >
               <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
@@ -834,18 +844,20 @@ export default function InspectionDetailPage() {
               onClick={() => downloadSectionPDF('functional')}
               disabled={downloadingSection === 'functional'}
               style={{
-                padding: '6px 12px',
+                padding: '8px 16px',
                 backgroundColor: downloadingSection === 'functional' ? '#ccc' : '#000',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '4px',
                 fontSize: '12px',
+                fontWeight: '500',
                 cursor: downloadingSection === 'functional' ? 'not-allowed' : 'pointer',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '6px',
-                flexShrink: 0,
-                whiteSpace: 'nowrap',
+                width: '130px',
+                minWidth: '130px',
               }}
             >
               <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
@@ -868,18 +880,20 @@ export default function InspectionDetailPage() {
               onClick={() => downloadSectionPDF('safety')}
               disabled={downloadingSection === 'safety'}
               style={{
-                padding: '6px 12px',
+                padding: '8px 16px',
                 backgroundColor: downloadingSection === 'safety' ? '#ccc' : '#000',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '4px',
                 fontSize: '12px',
+                fontWeight: '500',
                 cursor: downloadingSection === 'safety' ? 'not-allowed' : 'pointer',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '6px',
-                flexShrink: 0,
-                whiteSpace: 'nowrap',
+                width: '130px',
+                minWidth: '130px',
               }}
             >
               <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
@@ -902,18 +916,20 @@ export default function InspectionDetailPage() {
               onClick={() => downloadSectionPDF('brakes_steering')}
               disabled={downloadingSection === 'brakes_steering'}
               style={{
-                padding: '6px 12px',
+                padding: '8px 16px',
                 backgroundColor: downloadingSection === 'brakes_steering' ? '#ccc' : '#000',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '4px',
                 fontSize: '12px',
+                fontWeight: '500',
                 cursor: downloadingSection === 'brakes_steering' ? 'not-allowed' : 'pointer',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '6px',
-                flexShrink: 0,
-                whiteSpace: 'nowrap',
+                width: '130px',
+                minWidth: '130px',
               }}
             >
               <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
