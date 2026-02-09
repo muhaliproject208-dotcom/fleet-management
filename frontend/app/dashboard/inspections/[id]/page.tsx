@@ -627,6 +627,8 @@ export default function InspectionDetailPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
               }}
             >
               <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
@@ -683,6 +685,8 @@ export default function InspectionDetailPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
               }}
             >
               <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
@@ -738,6 +742,8 @@ export default function InspectionDetailPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
               }}
             >
               <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
@@ -770,6 +776,8 @@ export default function InspectionDetailPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
               }}
             >
               <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
@@ -802,6 +810,8 @@ export default function InspectionDetailPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
               }}
             >
               <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
@@ -834,6 +844,8 @@ export default function InspectionDetailPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
               }}
             >
               <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
@@ -866,6 +878,8 @@ export default function InspectionDetailPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
               }}
             >
               <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
@@ -898,6 +912,8 @@ export default function InspectionDetailPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
               }}
             >
               <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
